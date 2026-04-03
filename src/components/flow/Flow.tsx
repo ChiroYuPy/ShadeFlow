@@ -11,7 +11,7 @@ import ReactFlow, {
     type EdgeTypes,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { useEffect, useCallback, useState, useMemo } from 'react';
+import { useEffect, useCallback, useState, useMemo, useRef } from 'react';
 
 import FloatNode from './nodes/constant/FloatNode';
 import Vec2Node from './nodes/constant/Vec2Node';
@@ -65,6 +65,7 @@ import NodeSelectorModal from './ui/NodeSelectorModal';
 import { generateWGSL } from './utils/graphToWGSL';
 import type { FlowEdge, NodeData } from './types/FlowTypes';
 import { validateConnection } from './utils/connectionValidation';
+import Toolbar from './ui/Toolbar';
 
 const nodeTypes: NodeTypes = {
     float: FloatNode,
@@ -124,13 +125,19 @@ const edgeTypes: EdgeTypes = {
 let nodeIdCounter = 0;
 
 function FlowContent() {
-    const { getViewport, setNodes, setEdges } = useReactFlow();
+    const { getViewport, setNodes, setEdges, zoomIn, zoomOut, fitView } = useReactFlow();
     const [nodes, , onNodesChange] = useNodesState<NodeData>([]);
     const [edges, , onEdgesChange] = useEdgesState<FlowEdge>([]);
 
     // Context menu state
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
     const [nodeSelectorModal, setNodeSelectorModal] = useState(false);
+
+    // Undo/Redo state
+    const history = useRef<{ nodes: typeof nodes; edges: typeof edges }[]>([]);
+    const historyIndex = useRef(0);
+    const [canUndo, setCanUndo] = useState(false);
+    const [canRedo, setCanRedo] = useState(false);
 
     // Apply dragHandle to all nodes
     const nodesWithDragHandle = useMemo(() =>
@@ -150,50 +157,165 @@ function FlowContent() {
         }
 
         const edgeType = connection.sourceHandle?.split('-')[0] ?? 'default';
-        setEdges((eds) => addEdge({ ...connection, type: edgeType }, eds));
+        setEdges((eds) => {
+            const newEdges = addEdge({ ...connection, type: edgeType }, eds);
+            // Save to history
+            history.current = [...history.current.slice(0, historyIndex.current + 1), { nodes, edges: newEdges }];
+            historyIndex.current = history.current.length - 1;
+            updateHistoryState();
+            return newEdges;
+        });
     };
+
+    // Save state to history
+    const saveToHistory = useCallback(() => {
+        history.current = [...history.current.slice(0, historyIndex.current + 1), { nodes, edges }];
+        historyIndex.current = history.current.length - 1;
+        updateHistoryState();
+    }, [nodes, edges]);
+
+    // Update undo/redo state
+    const updateHistoryState = useCallback(() => {
+        setCanUndo(historyIndex.current > 0);
+        setCanRedo(historyIndex.current < history.current.length - 1);
+    }, []);
+
+    // Initialize history
+    useEffect(() => {
+        if (history.current.length === 0) {
+            history.current = [{ nodes, edges }];
+            updateHistoryState();
+        }
+    }, []);
+
+    // Toolbar actions
+    const handleUndo = useCallback(() => {
+        if (historyIndex.current > 0) {
+            historyIndex.current -= 1;
+            const { nodes: newNodes, edges: newEdges } = history.current[historyIndex.current];
+            setNodes(newNodes as any);
+            setEdges(newEdges as any);
+            updateHistoryState();
+        }
+    }, [setNodes, setEdges, updateHistoryState]);
+
+    const handleRedo = useCallback(() => {
+        if (historyIndex.current < history.current.length - 1) {
+            historyIndex.current += 1;
+            const { nodes: newNodes, edges: newEdges } = history.current[historyIndex.current];
+            setNodes(newNodes as any);
+            setEdges(newEdges as any);
+            updateHistoryState();
+        }
+    }, [setNodes, setEdges, updateHistoryState]);
+
+    const handleZoomIn = useCallback(() => {
+        zoomIn({ duration: 300 });
+    }, [zoomIn]);
+
+    const handleZoomOut = useCallback(() => {
+        zoomOut({ duration: 300 });
+    }, [zoomOut]);
+
+    const handleFitView = useCallback(() => {
+        fitView({ duration: 300, padding: 0.2 });
+    }, [fitView]);
+
+    const handleDuplicate = useCallback(() => {
+        const selectedNodes = nodes.filter((n) => n.selected);
+        if (selectedNodes.length > 0) {
+            const viewport = getViewport();
+            const offsetX = 50 / viewport.zoom;
+            const offsetY = 50 / viewport.zoom;
+
+            const newNodes = selectedNodes.map((node) => ({
+                ...node,
+                id: `${node.type}-${nodeIdCounter++}`,
+                position: {
+                    x: node.position.x + offsetX,
+                    y: node.position.y + offsetY,
+                },
+                selected: false,
+                dragHandle: '.node-drag-handle',
+            }));
+
+            setNodes((nds: any) => {
+                const updated = [...nds, ...newNodes];
+                saveToHistory();
+                return updated;
+            });
+        }
+    }, [nodes, setNodes, getViewport, saveToHistory]);
+
+    const handleDelete = useCallback(() => {
+        setNodes((nds: any) => {
+            const updated = nds.filter((n: any) => !n.selected);
+            saveToHistory();
+            return updated;
+        });
+        setEdges((eds: any) => {
+            const updated = eds.filter((e: any) => !e.selected);
+            saveToHistory();
+            return updated;
+        });
+    }, [setNodes, setEdges, saveToHistory]);
+
+    // Check if there are selected nodes/edges
+    const hasSelection = useMemo(() => {
+        return nodes.some((n) => n.selected) || edges.some((e) => e.selected);
+    }, [nodes, edges]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             // Ignore if in input
             if ((e.target as HTMLElement).tagName === 'INPUT') return;
 
+            // Undo (Ctrl+Z)
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                handleUndo();
+                return;
+            }
+
+            // Redo (Ctrl+Y or Ctrl+Shift+Z)
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+                e.preventDefault();
+                handleRedo();
+                return;
+            }
+
             // Delete key to remove selected elements
             if (e.key === 'Delete' || e.key === 'Backspace') {
-                if (nodes.length > 0) {
-                    setNodes((nds: any) => nds.filter((n: any) => !n.selected));
-                    setEdges((eds: any) => eds.filter((e: any) => !e.selected));
+                if (hasSelection) {
+                    handleDelete();
                 }
             }
 
             // Ctrl+D to duplicate selected nodes
             if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
-                const selectedNodes = nodes.filter((n) => n.selected);
-                if (selectedNodes.length > 0) {
-                    const viewport = getViewport();
-                    const offsetX = 50 / viewport.zoom;
-                    const offsetY = 50 / viewport.zoom;
+                handleDuplicate();
+            }
 
-                    const newNodes = selectedNodes.map((node) => ({
-                        ...node,
-                        id: `${node.type}-${nodeIdCounter++}`,
-                        position: {
-                            x: node.position.x + offsetX,
-                            y: node.position.y + offsetY,
-                        },
-                        selected: false,
-                        dragHandle: '.node-drag-handle',
-                    }));
-
-                    setNodes((nds: any) => [...nds, ...newNodes]);
-                }
+            // Zoom shortcuts
+            if ((e.ctrlKey || e.metaKey) && e.key === '=') {
+                e.preventDefault();
+                handleZoomIn();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+                e.preventDefault();
+                handleZoomOut();
+            }
+            // Fit view (Ctrl+0)
+            if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+                e.preventDefault();
+                handleFitView();
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [nodes, setNodes, setEdges, getViewport]);
+    }, [hasSelection, handleUndo, handleRedo, handleDelete, handleDuplicate, handleZoomIn, handleZoomOut, handleFitView]);
 
     // Context menu handler
     const handleContextMenu = useCallback((event: React.MouseEvent) => {
@@ -297,25 +419,38 @@ function FlowContent() {
     };
 
     return (
-        <ReactFlow
-            nodes={nodesWithDragHandle}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            edgeTypes={edgeTypes}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onContextMenu={handleContextMenu}
-            snapToGrid
-            snapGrid={[20, 20]}
-            fitView
-            minZoom={0.5}
-            maxZoom={2}
-            defaultEdgeOptions={{
-                animated: false,
-                style: { stroke: '#888' },
-            }}
-        >
+        <>
+            <Toolbar
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                onFitView={handleFitView}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                onDuplicate={handleDuplicate}
+                onDelete={handleDelete}
+                canUndo={canUndo}
+                canRedo={canRedo}
+                hasSelection={hasSelection}
+            />
+            <ReactFlow
+                nodes={nodesWithDragHandle}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onContextMenu={handleContextMenu}
+                snapToGrid
+                snapGrid={[20, 20]}
+                fitView
+                minZoom={0.5}
+                maxZoom={2}
+                defaultEdgeOptions={{
+                    animated: false,
+                    style: { stroke: '#888' },
+                }}
+            >
             <Background gap={20} size={1} variant={BackgroundVariant.Dots} />
             <FlowFloatingPanel saveGraph={saveGraph} loadGraph={loadGraph} compileWGSL={compileWGSL} />
 
@@ -337,6 +472,7 @@ function FlowContent() {
                 />
             )}
         </ReactFlow>
+        </>
     );
 }
 

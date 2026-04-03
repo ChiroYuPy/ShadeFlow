@@ -1,8 +1,8 @@
+import Flow from "./components/flow/Flow.tsx";
+
 function App() {
   return (
-    <>
-      App
-    </>
+    <Flow />
   )
 }
 

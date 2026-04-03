@@ -12,7 +12,7 @@ import ReactFlow, {
     type EdgeTypes,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState, useMemo } from 'react';
 
 import FloatNode from './nodes/constant/FloatNode';
 import Vec2Node from './nodes/constant/Vec2Node';
@@ -61,10 +61,11 @@ import MatrixInverseNode from './nodes/matrix/MatrixInverseNode';
 import MatrixTransposeNode from './nodes/matrix/MatrixTransposeNode';
 import Edge from './edges/Edge';
 import FlowFloatingPanel from '../ui/FlowFloatingPanel';
+import ContextMenu from './ui/ContextMenu';
+import NodeSelectorModal from './ui/NodeSelectorModal';
 import { generateWGSL } from './utils/graphToWGSL';
 import type { FlowEdge, NodeData } from './types/FlowTypes';
 import { validateConnection } from './utils/connectionValidation';
-import { getNodeTypeByShortcut } from './nodes/NodeRegistry';
 
 const nodeTypes: NodeTypes = {
     float: FloatNode,
@@ -124,9 +125,22 @@ const edgeTypes: EdgeTypes = {
 let nodeIdCounter = 0;
 
 function FlowContent() {
-    const { getViewport } = useReactFlow();
-    const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
-    const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
+    const { getViewport, setNodes, setEdges } = useReactFlow();
+    const [nodes, , onNodesChange] = useNodesState<NodeData>([]);
+    const [edges, , onEdgesChange] = useEdgesState<FlowEdge>([]);
+
+    // Context menu state
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+    const [nodeSelectorModal, setNodeSelectorModal] = useState(false);
+
+    // Apply dragHandle to all nodes
+    const nodesWithDragHandle = useMemo(() =>
+        nodes.map((node: any) => ({
+            ...node,
+            dragHandle: '.node-drag-handle'
+        })),
+        [nodes]
+    );
 
     const onConnect = (connection: Connection) => {
         const validation = validateConnection(connection);
@@ -140,32 +154,121 @@ function FlowContent() {
         setEdges((eds) => addEdge({ ...connection, type: edgeType }, eds));
     };
 
-    const addNode = useCallback((type: string) => {
-        const viewport = getViewport();
-        // Center of screen in project coordinates
-        const centerX = (window.innerWidth / 2 - viewport.x) / viewport.zoom;
-        const centerY = (window.innerHeight / 2 - viewport.y) / viewport.zoom;
-
-        const id = `${type}-${nodeIdCounter++}`;
-
-        // Les valeurs par défaut sont définies dans les composants de nœuds eux-mêmes
-        setNodes((nds) => [...nds, { id, type, data: {}, position: { x: centerX, y: centerY } }]);
-    }, [getViewport, setNodes]);
-
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             // Ignore if in input
             if ((e.target as HTMLElement).tagName === 'INPUT') return;
 
-            const nodeType = getNodeTypeByShortcut(e.key);
-            if (nodeType) {
-                addNode(nodeType);
+            // Delete key to remove selected elements
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (nodes.length > 0) {
+                    setNodes((nds: any) => nds.filter((n: any) => !n.selected));
+                    setEdges((eds: any) => eds.filter((e: any) => !e.selected));
+                }
+            }
+
+            // Ctrl+D to duplicate selected nodes
+            if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                const selectedNodes = nodes.filter((n) => n.selected);
+                if (selectedNodes.length > 0) {
+                    const viewport = getViewport();
+                    const offsetX = 50 / viewport.zoom;
+                    const offsetY = 50 / viewport.zoom;
+
+                    const newNodes = selectedNodes.map((node) => ({
+                        ...node,
+                        id: `${node.type}-${nodeIdCounter++}`,
+                        position: {
+                            x: node.position.x + offsetX,
+                            y: node.position.y + offsetY,
+                        },
+                        selected: false,
+                        dragHandle: '.node-drag-handle',
+                    }));
+
+                    setNodes((nds: any) => [...nds, ...newNodes]);
+                }
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [addNode]);
+    }, [nodes, setNodes, setEdges, getViewport]);
+
+    // Context menu handler
+    const handleContextMenu = useCallback((event: React.MouseEvent) => {
+        event.preventDefault();
+
+        // Check if we clicked on a node or edge
+        const target = event.target as HTMLElement;
+        const nodeElement = target.closest('.react-flow__node');
+        const edgeElement = target.closest('.react-flow__edge');
+
+        if (nodeElement) {
+            // Find the node ID from the DOM element
+            const nodeId = nodeElement.getAttribute('data-id');
+            if (nodeId) {
+                // Select this node only
+                setNodes((nds: any) => nds.map((n: any) => ({ ...n, selected: n.id === nodeId })));
+                // Show context menu
+                setContextMenu({ x: event.clientX, y: event.clientY });
+                return;
+            }
+        }
+
+        if (edgeElement) {
+            // Find the edge ID from the DOM element
+            const edgeId = edgeElement.getAttribute('data-id');
+            if (edgeId) {
+                // Select this edge only
+                setEdges((eds: any) => eds.map((e: any) => ({ ...e, selected: e.id === edgeId })));
+                // Show context menu
+                setContextMenu({ x: event.clientX, y: event.clientY });
+                return;
+            }
+        }
+
+        // If we didn't click on a node or edge, show node selector modal
+        setNodeSelectorModal(true);
+    }, [setNodes, setEdges]);
+
+    const handleDeleteSelected = useCallback(() => {
+        setNodes((nds: any) => nds.filter((n: any) => !n.selected));
+        setEdges((eds: any) => eds.filter((e: any) => !e.selected));
+    }, [setNodes, setEdges]);
+
+    const handleDuplicateSelected = useCallback(() => {
+        const selectedNodes = nodes.filter((n) => n.selected);
+        if (selectedNodes.length > 0) {
+            const viewport = getViewport();
+            const offsetX = 50 / viewport.zoom;
+            const offsetY = 50 / viewport.zoom;
+
+            const newNodes = selectedNodes.map((node) => ({
+                ...node,
+                id: `${node.type}-${nodeIdCounter++}`,
+                position: {
+                    x: node.position.x + offsetX,
+                    y: node.position.y + offsetY,
+                },
+                selected: false,
+                dragHandle: '.node-drag-handle',
+            }));
+
+            setNodes((nds: any) => [...nds, ...newNodes]);
+        }
+    }, [nodes, setNodes, getViewport]);
+
+    const handleSelectNode = useCallback((nodeType: string) => {
+        const viewport = getViewport();
+        // Center of screen in project coordinates
+        const centerX = (window.innerWidth / 2 - viewport.x) / viewport.zoom;
+        const centerY = (window.innerHeight / 2 - viewport.y) / viewport.zoom;
+
+        const id = `${nodeType}-${nodeIdCounter++}`;
+        setNodes((nds: any) => [...nds, { id, type: nodeType, data: {}, position: { x: centerX, y: centerY }, dragHandle: '.node-drag-handle' }]);
+    }, [setNodes, getViewport]);
 
     const saveGraph = () => {
         const data = JSON.stringify({ nodes, edges }, null, 2);
@@ -180,8 +283,12 @@ function FlowContent() {
 
     const loadGraph = (json: string) => {
         const parsed = JSON.parse(json);
-        setNodes(parsed.nodes);
-        setEdges(parsed.edges);
+        const nodes = (parsed.nodes as any[]).map((node: any) => ({
+            ...node,
+            dragHandle: '.node-drag-handle'
+        }));
+        setNodes(nodes);
+        setEdges(parsed.edges as any);
     };
 
     const compileWGSL = () => {
@@ -192,13 +299,14 @@ function FlowContent() {
 
     return (
         <ReactFlow
-            nodes={nodes}
+            nodes={nodesWithDragHandle}
             edges={edges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onContextMenu={handleContextMenu}
             snapToGrid
             snapGrid={[20, 20]}
             fitView
@@ -212,6 +320,24 @@ function FlowContent() {
             <Controls />
             <Background gap={20} size={1} variant={BackgroundVariant.Dots} />
             <FlowFloatingPanel saveGraph={saveGraph} loadGraph={loadGraph} compileWGSL={compileWGSL} />
+
+            {/* Context Menus */}
+            {contextMenu && (
+                <ContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    onDelete={handleDeleteSelected}
+                    onDuplicate={handleDuplicateSelected}
+                    onClose={() => setContextMenu(null)}
+                />
+            )}
+
+            {nodeSelectorModal && (
+                <NodeSelectorModal
+                    onSelectNode={handleSelectNode}
+                    onClose={() => setNodeSelectorModal(false)}
+                />
+            )}
         </ReactFlow>
     );
 }

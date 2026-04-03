@@ -1,6 +1,7 @@
 import { ShaderType } from '../../types/ShaderType';
 import type { PortDef } from '../NodeWrapper';
 import NodeWrapper from '../NodeWrapper';
+import NodeIcon from '../NodeIcon';
 
 export interface TanNodeData {
   label?: string;
@@ -12,16 +13,8 @@ export default function TanNode({ data }: { data: TanNodeData }) {
   const outputs: PortDef[] = [{ label: 'out', shaderType: ShaderType.Float }];
 
   return (
-    <NodeWrapper title={data.label ?? 'Tan'} inputs={inputs} outputs={outputs} icon={<TrigIcon className="text-purple-400" size={14} strokeWidth={2.5} />}>
+    <NodeWrapper title={data.label ?? 'Tan'} inputs={inputs} outputs={outputs} icon={<NodeIcon type="tan" />}>
       <span className="text-xl font-light text-zinc-500 italic">tan(x)</span>
     </NodeWrapper>
-  );
-}
-
-function TrigIcon({ className, size, strokeWidth }: { className?: string; size?: number; strokeWidth?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M2 12s3-7 7-7 5 7 10 7 5-7 5-7" />
-    </svg>
   );
 }

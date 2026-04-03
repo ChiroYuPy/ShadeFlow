@@ -22,7 +22,6 @@ export default function NodeWrapper({
                                       inputs = [],
                                       outputs = [],
                                       children,
-                                      typeLabel,
                                       icon,
                                     }: NodeWrapperProps) {
   const contentHeight = Math.max(
@@ -34,13 +33,9 @@ export default function NodeWrapper({
   return (
     <div className="bg-zinc-800 text-white rounded-xl border border-zinc-600 overflow-hidden">
       {/* Header */}
-      <div className="px-1.5 py-0.5 border-b border-zinc-700 bg-zinc-800/50 flex items-center gap-1.5">
+      <div className="node-drag-handle px-1.5 py-0.5 border-b border-zinc-700 bg-zinc-800/50 flex items-center gap-1.5 cursor-move">
         {/* Icon slot */}
-        {icon && (
-          <div className="w-4 h-4 flex items-center justify-center shrink-0 rounded bg-zinc-700/50">
-            {icon}
-          </div>
-        )}
+        {icon && icon}
 
         {/* Title */}
         <div className="text-xs font-medium flex-1">{title}</div>

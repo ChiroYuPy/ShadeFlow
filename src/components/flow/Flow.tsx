@@ -14,26 +14,102 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { useEffect, useCallback } from 'react';
 
-import FloatNode from './nodes/input/FloatNode';
-import Vec2Node from './nodes/input/Vec2Node';
-import Vec3Node from './nodes/input/Vec3Node';
-import Vec4Node from './nodes/input/Vec4Node';
-import AddNode from './nodes/math/AddNode';
-import MultiplyNode from './nodes/math/MultiplyNode';
+import FloatNode from './nodes/constant/FloatNode';
+import Vec2Node from './nodes/constant/Vec2Node';
+import Vec3Node from './nodes/constant/Vec3Node';
+import Vec4Node from './nodes/constant/Vec4Node';
+import AddNode from './nodes/arithmetic/AddNode';
+import SubtractNode from './nodes/arithmetic/SubtractNode';
+import MultiplyNode from './nodes/arithmetic/MultiplyNode';
+import DivideNode from './nodes/arithmetic/DivideNode';
+import PowerNode from './nodes/math/PowerNode';
+import SqrtNode from './nodes/math/SqrtNode';
+import AbsNode from './nodes/math/AbsNode';
+import MinNode from './nodes/math/MinNode';
+import MaxNode from './nodes/math/MaxNode';
+import ClampNode from './nodes/math/ClampNode';
+import MixNode from './nodes/math/MixNode';
+import StepNode from './nodes/math/StepNode';
+import SmoothStepNode from './nodes/math/SmoothStepNode';
+import SinNode from './nodes/trigonometry/SinNode';
+import CosNode from './nodes/trigonometry/CosNode';
+import TanNode from './nodes/trigonometry/TanNode';
+import TimeNode from './nodes/builtin/TimeNode';
+import DeltaTimeNode from './nodes/builtin/DeltaTimeNode';
+import UVNode from './nodes/builtin/UVNode';
+import KeyDownNode from './nodes/builtin/KeyDownNode';
+import KeyUpNode from './nodes/builtin/KeyUpNode';
+import CursorDownNode from './nodes/builtin/CursorDownNode';
+import CursorUpNode from './nodes/builtin/CursorUpNode';
+import CursorPosNode from './nodes/builtin/CursorPosNode';
+import AndNode from './nodes/logic/AndNode';
+import OrNode from './nodes/logic/OrNode';
+import NotNode from './nodes/logic/NotNode';
+import CompareNode from './nodes/logic/CompareNode';
+import IfNode from './nodes/logic/IfNode';
+import DotNode from './nodes/vector/DotNode';
+import CrossNode from './nodes/vector/CrossNode';
+import NormalizeNode from './nodes/vector/NormalizeNode';
+import LengthNode from './nodes/vector/LengthNode';
+import DistanceNode from './nodes/vector/DistanceNode';
+import ReflectNode from './nodes/vector/ReflectNode';
+import RefractNode from './nodes/vector/RefractNode';
+import MatrixIdentityNode from './nodes/matrix/MatrixIdentityNode';
+import MatrixMultiplyNode from './nodes/matrix/MatrixMultiplyNode';
+import MatrixInverseNode from './nodes/matrix/MatrixInverseNode';
+import MatrixTransposeNode from './nodes/matrix/MatrixTransposeNode';
 import Edge from './edges/Edge';
 import FlowFloatingPanel from '../ui/FlowFloatingPanel';
 import { generateWGSL } from './utils/graphToWGSL';
 import type { FlowEdge, NodeData } from './types/FlowTypes';
 import { validateConnection } from './utils/connectionValidation';
-import { ShaderType } from './types/ShaderType';
+import { getNodeTypeByShortcut } from './nodes/NodeRegistry';
 
 const nodeTypes: NodeTypes = {
     float: FloatNode,
-    add: AddNode,
-    multiply: MultiplyNode,
     vec2: Vec2Node,
     vec3: Vec3Node,
     vec4: Vec4Node,
+    add: AddNode,
+    subtract: SubtractNode,
+    multiply: MultiplyNode,
+    divide: DivideNode,
+    power: PowerNode,
+    sqrt: SqrtNode,
+    abs: AbsNode,
+    min: MinNode,
+    max: MaxNode,
+    clamp: ClampNode,
+    mix: MixNode,
+    step: StepNode,
+    smoothstep: SmoothStepNode,
+    sin: SinNode,
+    cos: CosNode,
+    tan: TanNode,
+    time: TimeNode,
+    deltatime: DeltaTimeNode,
+    uv: UVNode,
+    keydown: KeyDownNode,
+    keyup: KeyUpNode,
+    cursordown: CursorDownNode,
+    cursorup: CursorUpNode,
+    cursorpos: CursorPosNode,
+    and: AndNode,
+    or: OrNode,
+    not: NotNode,
+    compare: CompareNode,
+    if: IfNode,
+    dot: DotNode,
+    cross: CrossNode,
+    normalize: NormalizeNode,
+    length: LengthNode,
+    distance: DistanceNode,
+    reflect: ReflectNode,
+    refract: RefractNode,
+    matrixidentity: MatrixIdentityNode,
+    matrixmultiply: MatrixMultiplyNode,
+    matrixinverse: MatrixInverseNode,
+    matrixtranspose: MatrixTransposeNode,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -70,56 +146,8 @@ function FlowContent() {
 
         const id = `${type}-${nodeIdCounter++}`;
 
-        let newNode: NodeData;
-
-        switch (type) {
-            case 'float':
-                newNode = {
-                    label: 'Float',
-                    value: 1,
-                } as any;
-                break;
-            case 'vec2':
-                newNode = {
-                    label: 'Vec2',
-                    x: 0,
-                    y: 0,
-                } as any;
-                break;
-            case 'vec3':
-                newNode = {
-                    label: 'Vec3',
-                    x: 0,
-                    y: 0,
-                    z: 0,
-                } as any;
-                break;
-            case 'vec4':
-                newNode = {
-                    label: 'Vec4',
-                    x: 0,
-                    y: 0,
-                    z: 0,
-                    w: 0,
-                } as any;
-                break;
-            case 'add':
-                newNode = {
-                    label: 'Add',
-                    type: ShaderType.Float,
-                } as any;
-                break;
-            case 'multiply':
-                newNode = {
-                    label: 'Multiply',
-                    type: ShaderType.Float,
-                } as any;
-                break;
-            default:
-                newNode = { label: type } as any;
-        }
-
-        setNodes((nds) => [...nds, { id, type, data: newNode, position: { x: centerX, y: centerY } }]);
+        // Les valeurs par défaut sont définies dans les composants de nœuds eux-mêmes
+        setNodes((nds) => [...nds, { id, type, data: {}, position: { x: centerX, y: centerY } }]);
     }, [getViewport, setNodes]);
 
     useEffect(() => {
@@ -127,25 +155,9 @@ function FlowContent() {
             // Ignore if in input
             if ((e.target as HTMLElement).tagName === 'INPUT') return;
 
-            switch (e.key) {
-                case '1':
-                    addNode('float');
-                    break;
-                case '2':
-                    addNode('add');
-                    break;
-                case '3':
-                    addNode('multiply');
-                    break;
-                case '4':
-                    addNode('vec2');
-                    break;
-                case '5':
-                    addNode('vec3');
-                    break;
-                case '6':
-                    addNode('vec4');
-                    break;
+            const nodeType = getNodeTypeByShortcut(e.key);
+            if (nodeType) {
+                addNode(nodeType);
             }
         };
 

@@ -10,3 +10,13 @@
   --color-dark-accent: rgb(100 116 139);
   --color-dark-accent-hover: rgb(71 85 105);
 }
+
+/* Hide ReactFlow attribution */
+.react-flow__attribution {
+  display: none !important;
+}
+
+/* Hide default ReactFlow logo */
+.react-flow__panel {
+  display: none !important;
+}

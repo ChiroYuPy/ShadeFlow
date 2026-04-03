@@ -6,7 +6,8 @@
       "Bash(npm run:*)",
       "Bash(npm uninstall:*)",
       "Bash(git add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npx gh-pages:*)"
     ]
   }
 }

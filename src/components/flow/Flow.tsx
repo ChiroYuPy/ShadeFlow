@@ -1,7 +1,6 @@
 import ReactFlow, {
     Background,
     BackgroundVariant,
-    Controls,
     ReactFlowProvider,
     useNodesState,
     useEdgesState,
@@ -317,7 +316,6 @@ function FlowContent() {
                 style: { stroke: '#888' },
             }}
         >
-            <Controls />
             <Background gap={20} size={1} variant={BackgroundVariant.Dots} />
             <FlowFloatingPanel saveGraph={saveGraph} loadGraph={loadGraph} compileWGSL={compileWGSL} />
 

@@ -1,6 +1,7 @@
 import { ShaderType } from '../../types/ShaderType';
 import type { PortDef } from '../NodeWrapper';
 import NodeWrapper from '../NodeWrapper';
+import getIcon, { NodeType } from '../NodeIcons';
 
 export interface AddNodeData {
   label?: string;
@@ -18,7 +19,7 @@ export default function AddNode({ data }: { data: AddNodeData }) {
   const outputs: PortDef[] = [{ label: 'out', shaderType: type }];
 
   return (
-    <NodeWrapper title={data.label ?? 'Add'} inputs={inputs} outputs={outputs} typeLabel={type}>
+    <NodeWrapper title={data.label ?? 'Add'} inputs={inputs} outputs={outputs} icon={getIcon(NodeType.Add)}>
       <span className="text-2xl font-light text-zinc-500">+</span>
     </NodeWrapper>
   );

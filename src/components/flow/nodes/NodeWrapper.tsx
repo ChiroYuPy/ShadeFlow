@@ -12,35 +12,42 @@ interface NodeWrapperProps {
   inputs?: PortDef[];
   outputs?: PortDef[];
   children?: ReactNode;
-  typeLabel?: string;
+  icon?: ReactNode;
 }
 
-const PORT_HEIGHT = 24; // fixed height per port
+const PORT_HEIGHT = 24;
 
 export default function NodeWrapper({
-  title,
-  inputs = [],
-  outputs = [],
-  children,
-  typeLabel,
-}: NodeWrapperProps) {
+                                      title,
+                                      inputs = [],
+                                      outputs = [],
+                                      children,
+                                      typeLabel,
+                                      icon,
+                                    }: NodeWrapperProps) {
   const contentHeight = Math.max(
     inputs.length * PORT_HEIGHT,
     outputs.length * PORT_HEIGHT,
-    40, // minimum height
+    40,
   );
 
   return (
     <div className="bg-zinc-800 text-white rounded-xl border border-zinc-600 overflow-hidden">
-      {/* Fixed header */}
-      <div className="px-3 py-2 border-b border-zinc-700 bg-zinc-800/50">
-        <div className="text-sm font-medium">{title}</div>
-        {typeLabel && <div className="text-xs text-zinc-400">{typeLabel}</div>}
+      {/* Header */}
+      <div className="px-1.5 py-0.5 border-b border-zinc-700 bg-zinc-800/50 flex items-center gap-1.5">
+        {/* Icon slot */}
+        {icon && (
+          <div className="w-4 h-4 flex items-center justify-center shrink-0 rounded bg-zinc-700/50">
+            {icon}
+          </div>
+        )}
+
+        {/* Title */}
+        <div className="text-xs font-medium flex-1">{title}</div>
       </div>
 
-      {/* Content in 3 columns */}
+      {/* Content */}
       <div className="flex" style={{ minHeight: contentHeight }}>
-        {/* Inputs column */}
         {inputs.length > 0 && (
           <div className="flex flex-col justify-center py-2 px-1 border-r border-zinc-700/50 bg-zinc-900/30 min-w-[60px]">
             {inputs.map((port, index) => (
@@ -51,12 +58,10 @@ export default function NodeWrapper({
           </div>
         )}
 
-        {/* Center column - custom content */}
         <div className="flex-1 p-2 flex items-center justify-center">
           {children}
         </div>
 
-        {/* Outputs column */}
         {outputs.length > 0 && (
           <div className="flex flex-col justify-center py-2 px-1 border-l border-zinc-700/50 bg-zinc-900/30 min-w-[60px]">
             {outputs.map((port, index) => (

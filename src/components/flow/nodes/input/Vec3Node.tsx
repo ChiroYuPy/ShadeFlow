@@ -1,6 +1,7 @@
 import { ShaderType } from '../../types/ShaderType';
 import type { PortDef } from '../NodeWrapper';
 import NodeWrapper from '../NodeWrapper';
+import getIcon, { NodeType } from '../NodeIcons';
 
 export interface Vec3NodeData {
   label?: string;
@@ -17,7 +18,7 @@ export default function Vec3Node({ data }: { data: Vec3NodeData }) {
   const outputs: PortDef[] = [{ label: 'out', shaderType: ShaderType.Vec3 }];
 
   return (
-    <NodeWrapper title={data.label ?? 'Vec3'} outputs={outputs} typeLabel="vec3">
+    <NodeWrapper title={data.label ?? 'Vec3'} outputs={outputs} icon={getIcon(NodeType.Vec3)}>
       <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-sm font-mono">
         <span className="text-amber-400">x: {x}</span>
         <span className="text-amber-400">y: {y}</span>

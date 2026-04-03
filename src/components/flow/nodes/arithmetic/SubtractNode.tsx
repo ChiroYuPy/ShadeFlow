@@ -1,7 +1,6 @@
 import { ShaderType } from '../../types/ShaderType';
 import type { PortDef } from '../NodeWrapper';
 import NodeWrapper from '../NodeWrapper';
-import getIcon, { NodeType } from '../NodeIcons';
 
 export interface SubtractNodeData {
   label?: string;

@@ -17,6 +17,7 @@ export const nodeRegistry: NodeInfo[] = [
   { type: 'vec2', label: 'Vec2', description: '2D vector constant', shortcut: '2', category: 'constant' },
   { type: 'vec3', label: 'Vec3', description: '3D vector constant', shortcut: '3', category: 'constant' },
   { type: 'vec4', label: 'Vec4', description: '4D vector constant', shortcut: '4', category: 'constant' },
+  { type: 'color', label: 'Color', description: 'RGBA color (1,1,1,1)', shortcut: '²', category: 'constant' },
 
   // Arithmetic
   { type: 'add', label: 'Add', description: 'Addition a + b', shortcut: '5', category: 'arithmetic' },

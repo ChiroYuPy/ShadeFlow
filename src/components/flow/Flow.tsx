@@ -18,6 +18,7 @@ import FloatNode from './nodes/constant/FloatNode';
 import Vec2Node from './nodes/constant/Vec2Node';
 import Vec3Node from './nodes/constant/Vec3Node';
 import Vec4Node from './nodes/constant/Vec4Node';
+import ColorNode from './nodes/constant/ColorNode';
 import AddNode from './nodes/arithmetic/AddNode';
 import SubtractNode from './nodes/arithmetic/SubtractNode';
 import MultiplyNode from './nodes/arithmetic/MultiplyNode';
@@ -34,14 +35,14 @@ import SmoothStepNode from './nodes/math/SmoothStepNode';
 import SinNode from './nodes/trigonometry/SinNode';
 import CosNode from './nodes/trigonometry/CosNode';
 import TanNode from './nodes/trigonometry/TanNode';
-import TimeNode from './nodes/builtin/TimeNode';
-import DeltaTimeNode from './nodes/builtin/DeltaTimeNode';
-import UVNode from './nodes/builtin/UVNode';
-import KeyDownNode from './nodes/builtin/KeyDownNode';
-import KeyUpNode from './nodes/builtin/KeyUpNode';
-import CursorDownNode from './nodes/builtin/CursorDownNode';
-import CursorUpNode from './nodes/builtin/CursorUpNode';
-import CursorPosNode from './nodes/builtin/CursorPosNode';
+import TimeNode from './nodes/input/TimeNode';
+import DeltaTimeNode from './nodes/input/DeltaTimeNode';
+import UVNode from './nodes/input/UVNode';
+import KeyDownNode from './nodes/input/KeyDownNode';
+import KeyUpNode from './nodes/input/KeyUpNode';
+import CursorDownNode from './nodes/input/CursorDownNode';
+import CursorUpNode from './nodes/input/CursorUpNode';
+import CursorPosNode from './nodes/input/CursorPosNode';
 import AndNode from './nodes/logic/AndNode';
 import OrNode from './nodes/logic/OrNode';
 import NotNode from './nodes/logic/NotNode';
@@ -70,6 +71,7 @@ const nodeTypes: NodeTypes = {
     vec2: Vec2Node,
     vec3: Vec3Node,
     vec4: Vec4Node,
+    color: ColorNode,
     add: AddNode,
     subtract: SubtractNode,
     multiply: MultiplyNode,

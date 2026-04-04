@@ -1,4 +1,5 @@
 import React from 'react';
+import { Download, Upload, FilePlus, Settings } from 'lucide-react';
 import { getVersion } from '../../version';
 
 interface HeaderProps {
@@ -46,8 +47,8 @@ export default function Header({
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-zinc-900 border-b border-zinc-800 flex items-center px-4">
-      {/* Left - Logo & Project Name */}
-      <div className="flex items-center gap-3 w-80">
+      {/* Left - Logo, Project Name & Version */}
+      <div className="flex items-center gap-3 w-96">
         <img src={`${import.meta.env.BASE_URL}icon.png`} alt="ShadeFlow" className="w-8 h-8 rounded-lg" />
         <div className="flex-1 min-w-0">
           {isEditing ? (
@@ -62,10 +63,11 @@ export default function Header({
             />
           ) : (
             <div
-              className="flex items-center gap-2 cursor-pointer group"
+              className="flex items-center gap-3 cursor-pointer group"
               onClick={handleStartEdit}
             >
               <h1 className="text-sm font-semibold text-white truncate">{projectName}</h1>
+              <span className="text-xs text-zinc-500 font-mono">v{getVersion()}</span>
               <svg className="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
@@ -126,42 +128,29 @@ export default function Header({
 
       {/* Right - Actions */}
       <div className="flex items-center gap-2 w-80 justify-end">
-        {/* Version badge */}
-        <div className="px-2 py-1 rounded-md bg-zinc-800 border border-zinc-700">
-          <span className="text-xs text-zinc-400 font-mono">v{getVersion()}</span>
-        </div>
-
         <button
           onClick={onNewProject}
           className="p-2 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-white"
           title="New Project"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
+          <FilePlus className="w-5 h-5" />
         </button>
         <button
           onClick={onExportProject}
           className="p-2 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-white"
           title="Export Project"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-8-8l4 4m0 0l4-4m-4 4V4" />
-          </svg>
+          <Upload className="w-5 h-5" />
         </button>
         <button
           onClick={onLoadProject}
           className="p-2 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-white"
           title="Import Project"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-          </svg>
+          <Download className="w-5 h-5" />
         </button>
         <button className="p-2 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-white" title="Settings">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-          </svg>
+          <Settings className="w-5 h-5" />
         </button>
       </div>
     </header>

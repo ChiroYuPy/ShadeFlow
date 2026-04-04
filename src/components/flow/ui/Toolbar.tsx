@@ -97,7 +97,7 @@ export default function Toolbar({
   ];
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+    <div className="fixed top-[4.5rem] left-1/2 -translate-x-1/2 z-30">
       <div className="flex items-center gap-1 bg-zinc-800/95 backdrop-blur-sm border border-zinc-700 rounded-lg shadow-2xl px-1.5 py-1.5">
         {toolbarItems.map((item, index) => {
           if ('separator' in item) {

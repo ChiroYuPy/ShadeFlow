@@ -7,7 +7,11 @@
       "Bash(npm uninstall:*)",
       "Bash(git add:*)",
       "Bash(git push:*)",
-      "Bash(npx gh-pages:*)"
+      "Bash(npx gh-pages:*)",
+      "Bash(cd:*)",
+      "Bash(git checkout:*)",
+      "Bash(head:*)",
+      "Bash(cd /c/Users/chiro/WebstormProjects/ShadeFlow && rm -rf node_modules/.vite && npm run build 2>&1)"
     ]
   }
 }

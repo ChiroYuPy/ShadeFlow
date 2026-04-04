@@ -2,13 +2,15 @@ import ReactFlow, {
     Background,
     BackgroundVariant,
     ReactFlowProvider,
-    useNodesState,
-    useEdgesState,
     addEdge,
     useReactFlow,
     type Connection,
     type NodeTypes,
     type EdgeTypes,
+    type NodeChange,
+    type EdgeChange,
+    applyNodeChanges,
+    applyEdgeChanges,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useEffect, useCallback, useState, useMemo, useRef } from 'react';
@@ -58,14 +60,14 @@ import MatrixIdentityNode from './nodes/matrix/MatrixIdentityNode';
 import MatrixMultiplyNode from './nodes/matrix/MatrixMultiplyNode';
 import MatrixInverseNode from './nodes/matrix/MatrixInverseNode';
 import MatrixTransposeNode from './nodes/matrix/MatrixTransposeNode';
+import OutputNode from './nodes/output/OutputNode';
 import Edge from './edges/Edge';
-import FlowFloatingPanel from '../ui/FlowFloatingPanel';
 import ContextMenu from './ui/ContextMenu';
 import NodeSelectorModal from './ui/NodeSelectorModal';
-import { generateWGSL } from './utils/graphToWGSL';
-import type { FlowEdge, NodeData } from './types/FlowTypes';
 import { validateConnection } from './utils/connectionValidation';
 import Toolbar from './ui/Toolbar';
+import { useProject } from '../../contexts/ProjectContext';
+import { useFlowData } from '../../contexts/FlowDataContext';
 
 const nodeTypes: NodeTypes = {
     float: FloatNode,
@@ -113,6 +115,7 @@ const nodeTypes: NodeTypes = {
     matrixmultiply: MatrixMultiplyNode,
     matrixinverse: MatrixInverseNode,
     matrixtranspose: MatrixTransposeNode,
+    shaderoutput: OutputNode,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -125,9 +128,17 @@ const edgeTypes: EdgeTypes = {
 let nodeIdCounter = 0;
 
 function FlowContent() {
-    const { getViewport, setNodes, setEdges, zoomIn, zoomOut, fitView } = useReactFlow();
-    const [nodes, , onNodesChange] = useNodesState<NodeData>([]);
-    const [edges, , onEdgesChange] = useEdgesState<FlowEdge>([]);
+    const { getViewport, zoomIn, zoomOut, fitView } = useReactFlow();
+    const { registerFlowHandlers } = useProject();
+    const { nodes, edges, setNodes, setEdges } = useFlowData();
+
+    const onNodesChange = useCallback((changes: NodeChange[]) => {
+        setNodes((nds) => applyNodeChanges(changes, nds));
+    }, [setNodes]);
+
+    const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+        setEdges((eds) => applyEdgeChanges(changes, eds));
+    }, [setEdges]);
 
     // Context menu state
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -148,7 +159,25 @@ function FlowContent() {
         [nodes]
     );
 
-    const onConnect = (connection: Connection) => {
+    // Update undo/redo state - call directly to avoid render issues
+    const updateHistoryState = useCallback(() => {
+        const canUndoValue = historyIndex.current > 0;
+        const canRedoValue = historyIndex.current < history.current.length - 1;
+        setCanUndo(canUndoValue);
+        setCanRedo(canRedoValue);
+    }, []);
+
+    // Save state to history
+    const saveToHistory = useCallback(() => {
+        history.current = [...history.current.slice(0, historyIndex.current + 1), { nodes, edges }];
+        historyIndex.current = history.current.length - 1;
+        const canUndoValue = historyIndex.current > 0;
+        const canRedoValue = historyIndex.current < history.current.length - 1;
+        setCanUndo(canUndoValue);
+        setCanRedo(canRedoValue);
+    }, [nodes, edges]);
+
+    const onConnect = useCallback((connection: Connection) => {
         const validation = validateConnection(connection);
 
         if (!validation.valid) {
@@ -159,34 +188,49 @@ function FlowContent() {
         const edgeType = connection.sourceHandle?.split('-')[0] ?? 'default';
         setEdges((eds) => {
             const newEdges = addEdge({ ...connection, type: edgeType }, eds);
-            // Save to history
-            history.current = [...history.current.slice(0, historyIndex.current + 1), { nodes, edges: newEdges }];
-            historyIndex.current = history.current.length - 1;
-            updateHistoryState();
             return newEdges;
         });
-    };
 
-    // Save state to history
-    const saveToHistory = useCallback(() => {
-        history.current = [...history.current.slice(0, historyIndex.current + 1), { nodes, edges }];
+        // Save to history after state update
+        history.current = [...history.current.slice(0, historyIndex.current + 1), { nodes, edges: [...edges, { ...connection, type: edgeType, id: `edge-${edges.length}` }] }];
         historyIndex.current = history.current.length - 1;
-        updateHistoryState();
+        const canUndoValue = historyIndex.current > 0;
+        const canRedoValue = historyIndex.current < history.current.length - 1;
+        setCanUndo(canUndoValue);
+        setCanRedo(canRedoValue);
     }, [nodes, edges]);
 
-    // Update undo/redo state
-    const updateHistoryState = useCallback(() => {
-        setCanUndo(historyIndex.current > 0);
-        setCanRedo(historyIndex.current < history.current.length - 1);
-    }, []);
+    // Handlers for ProjectContext
+    const handleExportProject = useCallback(() => {
+        console.log('handleExportProject called');
+        const data = JSON.stringify({ nodes, edges }, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'shadeflow-project.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }, [nodes, edges]);
+
+    // Register handlers with ProjectContext
+    useEffect(() => {
+        console.log('Registering flow handlers');
+        registerFlowHandlers({
+            export: handleExportProject
+        });
+    }, [registerFlowHandlers, handleExportProject]);
 
     // Initialize history
     useEffect(() => {
         if (history.current.length === 0) {
             history.current = [{ nodes, edges }];
-            updateHistoryState();
+            const canUndoValue = historyIndex.current > 0;
+            const canRedoValue = historyIndex.current < history.current.length - 1;
+            setCanUndo(canUndoValue);
+            setCanRedo(canRedoValue);
         }
-    }, []);
+    }, [nodes, edges]);
 
     // Toolbar actions
     const handleUndo = useCallback(() => {
@@ -195,9 +239,12 @@ function FlowContent() {
             const { nodes: newNodes, edges: newEdges } = history.current[historyIndex.current];
             setNodes(newNodes as any);
             setEdges(newEdges as any);
-            updateHistoryState();
+            const canUndoValue = historyIndex.current > 0;
+            const canRedoValue = historyIndex.current < history.current.length - 1;
+            setCanUndo(canUndoValue);
+            setCanRedo(canRedoValue);
         }
-    }, [setNodes, setEdges, updateHistoryState]);
+    }, [setNodes, setEdges]);
 
     const handleRedo = useCallback(() => {
         if (historyIndex.current < history.current.length - 1) {
@@ -205,9 +252,12 @@ function FlowContent() {
             const { nodes: newNodes, edges: newEdges } = history.current[historyIndex.current];
             setNodes(newNodes as any);
             setEdges(newEdges as any);
-            updateHistoryState();
+            const canUndoValue = historyIndex.current > 0;
+            const canRedoValue = historyIndex.current < history.current.length - 1;
+            setCanUndo(canUndoValue);
+            setCanRedo(canRedoValue);
         }
-    }, [setNodes, setEdges, updateHistoryState]);
+    }, [setNodes, setEdges]);
 
     const handleZoomIn = useCallback(() => {
         zoomIn({ duration: 300 });
@@ -222,7 +272,7 @@ function FlowContent() {
     }, [fitView]);
 
     const handleDuplicate = useCallback(() => {
-        const selectedNodes = nodes.filter((n) => n.selected);
+        const selectedNodes = nodes.filter((n) => n.selected && n.type !== 'shaderoutput');
         if (selectedNodes.length > 0) {
             const viewport = getViewport();
             const offsetX = 50 / viewport.zoom;
@@ -239,7 +289,7 @@ function FlowContent() {
                 dragHandle: '.node-drag-handle',
             }));
 
-            setNodes((nds: any) => {
+            setNodes((nds) => {
                 const updated = [...nds, ...newNodes];
                 saveToHistory();
                 return updated;
@@ -248,13 +298,13 @@ function FlowContent() {
     }, [nodes, setNodes, getViewport, saveToHistory]);
 
     const handleDelete = useCallback(() => {
-        setNodes((nds: any) => {
-            const updated = nds.filter((n: any) => !n.selected);
+        setNodes((nds) => {
+            const updated = nds.filter((n) => !n.selected || n.type === 'shaderoutput');
             saveToHistory();
             return updated;
         });
-        setEdges((eds: any) => {
-            const updated = eds.filter((e: any) => !e.selected);
+        setEdges((eds) => {
+            const updated = eds.filter((e) => !e.selected);
             saveToHistory();
             return updated;
         });
@@ -331,7 +381,7 @@ function FlowContent() {
             const nodeId = nodeElement.getAttribute('data-id');
             if (nodeId) {
                 // Select this node only
-                setNodes((nds: any) => nds.map((n: any) => ({ ...n, selected: n.id === nodeId })));
+                setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === nodeId })));
                 // Show context menu
                 setContextMenu({ x: event.clientX, y: event.clientY });
                 return;
@@ -355,8 +405,8 @@ function FlowContent() {
     }, [setNodes, setEdges]);
 
     const handleDeleteSelected = useCallback(() => {
-        setNodes((nds: any) => nds.filter((n: any) => !n.selected));
-        setEdges((eds: any) => eds.filter((e: any) => !e.selected));
+        setNodes((nds) => nds.filter((n) => !n.selected || n.type === 'shaderoutput'));
+        setEdges((eds) => eds.filter((e) => !e.selected));
     }, [setNodes, setEdges]);
 
     const handleDuplicateSelected = useCallback(() => {
@@ -377,7 +427,7 @@ function FlowContent() {
                 dragHandle: '.node-drag-handle',
             }));
 
-            setNodes((nds: any) => [...nds, ...newNodes]);
+            setNodes((nds) => [...nds, ...newNodes]);
         }
     }, [nodes, setNodes, getViewport]);
 
@@ -388,35 +438,8 @@ function FlowContent() {
         const centerY = (window.innerHeight / 2 - viewport.y) / viewport.zoom;
 
         const id = `${nodeType}-${nodeIdCounter++}`;
-        setNodes((nds: any) => [...nds, { id, type: nodeType, data: {}, position: { x: centerX, y: centerY }, dragHandle: '.node-drag-handle' }]);
+        setNodes((nds) => [...nds, { id, type: nodeType, data: {}, position: { x: centerX, y: centerY }, dragHandle: '.node-drag-handle' }]);
     }, [setNodes, getViewport]);
-
-    const saveGraph = () => {
-        const data = JSON.stringify({ nodes, edges }, null, 2);
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'graph.json';
-        a.click();
-        URL.revokeObjectURL(url);
-    };
-
-    const loadGraph = (json: string) => {
-        const parsed = JSON.parse(json);
-        const nodes = (parsed.nodes as any[]).map((node: any) => ({
-            ...node,
-            dragHandle: '.node-drag-handle'
-        }));
-        setNodes(nodes);
-        setEdges(parsed.edges as any);
-    };
-
-    const compileWGSL = () => {
-        const code = generateWGSL(nodes, edges);
-        console.log(code);
-        alert('WGSL code generated (see console)');
-    };
 
     return (
         <>
@@ -451,8 +474,12 @@ function FlowContent() {
                     style: { stroke: '#888' },
                 }}
             >
+            <style>{`
+                .react-flow__node {
+                    background: transparent !important;
+                }
+            `}</style>
             <Background gap={20} size={1} variant={BackgroundVariant.Dots} />
-            <FlowFloatingPanel saveGraph={saveGraph} loadGraph={loadGraph} compileWGSL={compileWGSL} />
 
             {/* Context Menus */}
             {contextMenu && (
@@ -476,12 +503,10 @@ function FlowContent() {
     );
 }
 
-export default function Flow() {
+export default function FlowContentWrapper() {
     return (
         <ReactFlowProvider>
-            <div className="w-screen h-screen bg-zinc-900">
-                <FlowContent />
-            </div>
+            <FlowContent />
         </ReactFlowProvider>
     );
 }

@@ -398,6 +398,16 @@ function getSvgForType(type: string, size: number, strokeWidth: number) {
         </svg>
       );
 
+    // Output
+    case 'output':
+      return (
+        <svg {...commonProps} className="text-purple-400">
+          <path d="M5 12h14" />
+          <path d="M12 5l7 7-7 7" />
+          <circle cx="5" cy="12" r="2" fill="currentColor" />
+        </svg>
+      );
+
     default:
       return null;
   }

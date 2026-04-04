@@ -1,8 +1,8 @@
-import Flow from "./components/flow/Flow.tsx";
+import AppLayout from "./components/AppLayout";
 
 function App() {
   return (
-    <Flow />
+    <AppLayout />
   )
 }
 

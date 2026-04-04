@@ -134,7 +134,7 @@ export default function Vec4Node({ id, data }: { id: string; data: Vec4NodeData 
                 ref={inputXRef}
                 type="number"
                 value={localValue.x}
-                onChange={(e) => setLocalValue({ ...localValue, x: parseFloat(e.target.value) })}
+                onChange={(e) => setLocalValue({ ...localValue, x: parseFloat(e.target.value) || 0 })}
                 onKeyDown={(e) => handleKeyDown(e, 'x')}
                 className="w-24 px-3 py-2 bg-zinc-900 border border-zinc-600 rounded text-red-400 font-mono text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400/20"
                 step="0.01"
@@ -145,7 +145,7 @@ export default function Vec4Node({ id, data }: { id: string; data: Vec4NodeData 
                 ref={inputYRef}
                 type="number"
                 value={localValue.y}
-                onChange={(e) => setLocalValue({ ...localValue, y: parseFloat(e.target.value) })}
+                onChange={(e) => setLocalValue({ ...localValue, y: parseFloat(e.target.value) || 0 })}
                 onKeyDown={(e) => handleKeyDown(e, 'y')}
                 className="w-24 px-3 py-2 bg-zinc-900 border border-zinc-600 rounded text-red-400 font-mono text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400/20"
                 step="0.01"
@@ -155,7 +155,7 @@ export default function Vec4Node({ id, data }: { id: string; data: Vec4NodeData 
                 ref={inputZRef}
                 type="number"
                 value={localValue.z}
-                onChange={(e) => setLocalValue({ ...localValue, z: parseFloat(e.target.value) })}
+                onChange={(e) => setLocalValue({ ...localValue, z: parseFloat(e.target.value) || 0 })}
                 onKeyDown={(e) => handleKeyDown(e, 'z')}
                 className="w-24 px-3 py-2 bg-zinc-900 border border-zinc-600 rounded text-red-400 font-mono text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400/20"
                 step="0.01"
@@ -165,7 +165,7 @@ export default function Vec4Node({ id, data }: { id: string; data: Vec4NodeData 
                 ref={inputWRef}
                 type="number"
                 value={localValue.w}
-                onChange={(e) => setLocalValue({ ...localValue, w: parseFloat(e.target.value) })}
+                onChange={(e) => setLocalValue({ ...localValue, w: parseFloat(e.target.value) || 0 })}
                 onKeyDown={(e) => handleKeyDown(e, 'w')}
                 className="w-24 px-3 py-2 bg-zinc-900 border border-zinc-600 rounded text-red-400 font-mono text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400/20"
                 step="0.01"

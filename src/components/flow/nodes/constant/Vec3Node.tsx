@@ -129,7 +129,7 @@ export default function Vec3Node({ id, data }: { id: string; data: Vec3NodeData 
                 ref={inputXRef}
                 type="number"
                 value={localValue.x}
-                onChange={(e) => setLocalValue({ ...localValue, x: parseFloat(e.target.value) })}
+                onChange={(e) => setLocalValue({ ...localValue, x: parseFloat(e.target.value) || 0 })}
                 onKeyDown={(e) => handleKeyDown(e, 'x')}
                 className="w-20 px-3 py-2 bg-zinc-900 border border-zinc-600 rounded text-amber-400 font-mono text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
                 step="0.01"
@@ -140,7 +140,7 @@ export default function Vec3Node({ id, data }: { id: string; data: Vec3NodeData 
                 ref={inputYRef}
                 type="number"
                 value={localValue.y}
-                onChange={(e) => setLocalValue({ ...localValue, y: parseFloat(e.target.value) })}
+                onChange={(e) => setLocalValue({ ...localValue, y: parseFloat(e.target.value) || 0 })}
                 onKeyDown={(e) => handleKeyDown(e, 'y')}
                 className="w-20 px-3 py-2 bg-zinc-900 border border-zinc-600 rounded text-amber-400 font-mono text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
                 step="0.01"
@@ -150,7 +150,7 @@ export default function Vec3Node({ id, data }: { id: string; data: Vec3NodeData 
                 ref={inputZRef}
                 type="number"
                 value={localValue.z}
-                onChange={(e) => setLocalValue({ ...localValue, z: parseFloat(e.target.value) })}
+                onChange={(e) => setLocalValue({ ...localValue, z: parseFloat(e.target.value) || 0 })}
                 onKeyDown={(e) => handleKeyDown(e, 'z')}
                 className="w-20 px-3 py-2 bg-zinc-900 border border-zinc-600 rounded text-amber-400 font-mono text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
                 step="0.01"

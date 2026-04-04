@@ -179,7 +179,7 @@ export default function ShaderPreview({ className = '', nodes = [], edges = [] }
           for (const msg of compilationInfo.messages) {
             console.log(`  ${msg.type}: ${msg.message} (line ${msg.lineNum}, col ${msg.linePos})`);
           }
-          const hasErrors = compilationInfo.messages.some(msg => msg.type === 'error');
+          const hasErrors = compilationInfo.messages.some((msg: any) => msg.type === 'error');
           if (hasErrors) {
             setError('Shader compilation failed. Check console for details.');
             return;
@@ -291,7 +291,7 @@ export default function ShaderPreview({ className = '', nodes = [], edges = [] }
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('resize', resizeCanvas);
     };
-  }, [graphStructureHash, nodes, edges]);
+  }, [graphStructureHash]);
 
   return (
     <div ref={containerRef} className={`w-full h-full bg-black ${className}`} style={{ minHeight: '400px' }}>

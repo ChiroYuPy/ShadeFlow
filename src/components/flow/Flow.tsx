@@ -159,14 +159,6 @@ function FlowContent() {
         [nodes]
     );
 
-    // Update undo/redo state - call directly to avoid render issues
-    const updateHistoryState = useCallback(() => {
-        const canUndoValue = historyIndex.current > 0;
-        const canRedoValue = historyIndex.current < history.current.length - 1;
-        setCanUndo(canUndoValue);
-        setCanRedo(canRedoValue);
-    }, []);
-
     // Save state to history
     const saveToHistory = useCallback(() => {
         history.current = [...history.current.slice(0, historyIndex.current + 1), { nodes, edges }];
@@ -192,7 +184,8 @@ function FlowContent() {
         });
 
         // Save to history after state update
-        history.current = [...history.current.slice(0, historyIndex.current + 1), { nodes, edges: [...edges, { ...connection, type: edgeType, id: `edge-${edges.length}` }] }];
+        const newEdge = { ...connection, type: edgeType, id: `edge-${edges.length}` } as any;
+        history.current = [...history.current.slice(0, historyIndex.current + 1), { nodes, edges: [...edges, newEdge] }];
         historyIndex.current = history.current.length - 1;
         const canUndoValue = historyIndex.current > 0;
         const canRedoValue = historyIndex.current < history.current.length - 1;

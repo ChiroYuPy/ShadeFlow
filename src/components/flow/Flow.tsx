@@ -68,6 +68,7 @@ import { validateConnection } from './utils/connectionValidation';
 import Toolbar from './ui/Toolbar';
 import { useProject } from '../../contexts/ProjectContext';
 import { useFlowData } from '../../contexts/FlowDataContext';
+import NodePropertiesPanel from '../ui/NodePropertiesPanel';
 
 const nodeTypes: NodeTypes = {
     float: FloatNode,
@@ -150,11 +151,11 @@ function FlowContent() {
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
 
-    // Apply dragHandle to all nodes
+    // Apply dragHandle to all nodes - entire node is draggable
     const nodesWithDragHandle = useMemo(() =>
         nodes.map((node: any) => ({
             ...node,
-            dragHandle: '.node-drag-handle'
+            dragHandle: '.node-wrapper'
         })),
         [nodes]
     );
@@ -279,7 +280,7 @@ function FlowContent() {
                     y: node.position.y + offsetY,
                 },
                 selected: false,
-                dragHandle: '.node-drag-handle',
+                dragHandle: '.node-wrapper',
             }));
 
             setNodes((nds) => {
@@ -417,7 +418,7 @@ function FlowContent() {
                     y: node.position.y + offsetY,
                 },
                 selected: false,
-                dragHandle: '.node-drag-handle',
+                dragHandle: '.node-wrapper',
             }));
 
             setNodes((nds) => [...nds, ...newNodes]);
@@ -431,11 +432,35 @@ function FlowContent() {
         const centerY = (window.innerHeight / 2 - viewport.y) / viewport.zoom;
 
         const id = `${nodeType}-${nodeIdCounter++}`;
-        setNodes((nds) => [...nds, { id, type: nodeType, data: {}, position: { x: centerX, y: centerY }, dragHandle: '.node-drag-handle' }]);
+
+        // Set default data based on node type
+        let defaultData: any = {};
+        switch (nodeType) {
+            case 'float':
+                defaultData = { value: 1 };
+                break;
+            case 'vec2':
+                defaultData = { x: 0, y: 0 };
+                break;
+            case 'vec3':
+                defaultData = { x: 0, y: 0, z: 0 };
+                break;
+            case 'vec4':
+                defaultData = { x: 0, y: 0, z: 0, w: 0 };
+                break;
+            case 'color':
+                defaultData = { r: 1, g: 1, b: 1, a: 1 };
+                break;
+            default:
+                defaultData = {};
+        }
+
+        setNodes((nds) => [...nds, { id, type: nodeType, data: defaultData, position: { x: centerX, y: centerY }, dragHandle: '.node-wrapper' }]);
     }, [setNodes, getViewport]);
 
     return (
         <>
+            <NodePropertiesPanel />
             <Toolbar
                 onZoomIn={handleZoomIn}
                 onZoomOut={handleZoomOut}
@@ -457,6 +482,10 @@ function FlowContent() {
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
                 onContextMenu={handleContextMenu}
+                nodesDraggable
+                nodesConnectable
+                elementsSelectable
+                selectNodesOnDrag
                 snapToGrid
                 snapGrid={[20, 20]}
                 fitView

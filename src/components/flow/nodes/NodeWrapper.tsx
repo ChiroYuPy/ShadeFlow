@@ -31,9 +31,9 @@ export default function NodeWrapper({
   );
 
   return (
-    <div className="bg-zinc-800 text-white rounded-xl border border-zinc-600 overflow-hidden">
+    <div className="node-wrapper bg-zinc-800 text-white rounded-xl border border-zinc-600 overflow-hidden">
       {/* Header */}
-      <div className="node-drag-handle px-1.5 py-0.5 border-b border-zinc-700 bg-zinc-800/50 flex items-center gap-1.5 cursor-move">
+      <div className="px-1.5 py-0.5 border-b border-zinc-700 bg-zinc-800/50 flex items-center gap-1.5">
         {/* Icon slot */}
         {icon && icon}
 

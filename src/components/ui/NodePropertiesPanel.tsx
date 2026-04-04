@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useFlowData } from '../../contexts/FlowDataContext';
 import { useReactFlow } from 'reactflow';
 
@@ -43,6 +43,7 @@ export default function NodePropertiesPanel() {
   if (!hasValueProps && !data.label && !isOutputNode) return null;
 
   const handleValueChange = (key: string, value: number | string) => {
+    if (!node) return;
     setNodes((nds: any) =>
       nds.map((n: any) =>
         n.id === node.id
@@ -264,7 +265,7 @@ export default function NodePropertiesPanel() {
                     max="1"
                     step="0.01"
                     value={localR}
-                    onInput={(e) => setLocalR(e.target.value)}
+                    onInput={(e) => setLocalR((e.target as HTMLInputElement).value)}
                     onMouseUp={(e) => {
                       const num = parseFloat((e.target as HTMLInputElement).value);
                       handleValueChange('r', num);
@@ -286,7 +287,7 @@ export default function NodePropertiesPanel() {
                     max="1"
                     step="0.01"
                     value={localG}
-                    onInput={(e) => setLocalG(e.target.value)}
+                    onInput={(e) => setLocalG((e.target as HTMLInputElement).value)}
                     onMouseUp={(e) => {
                       const num = parseFloat((e.target as HTMLInputElement).value);
                       handleValueChange('g', num);
@@ -308,7 +309,7 @@ export default function NodePropertiesPanel() {
                     max="1"
                     step="0.01"
                     value={localB}
-                    onInput={(e) => setLocalB(e.target.value)}
+                    onInput={(e) => setLocalB((e.target as HTMLInputElement).value)}
                     onMouseUp={(e) => {
                       const num = parseFloat((e.target as HTMLInputElement).value);
                       handleValueChange('b', num);
@@ -330,7 +331,7 @@ export default function NodePropertiesPanel() {
                     max="1"
                     step="0.01"
                     value={localA}
-                    onInput={(e) => setLocalA(e.target.value)}
+                    onInput={(e) => setLocalA((e.target as HTMLInputElement).value)}
                     onMouseUp={(e) => {
                       const num = parseFloat((e.target as HTMLInputElement).value);
                       handleValueChange('a', num);

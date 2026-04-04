@@ -1,4 +1,5 @@
 import React from 'react';
+import { getVersion } from '../../version';
 
 interface HeaderProps {
   currentView: 'graph' | 'code' | 'render';
@@ -125,6 +126,11 @@ export default function Header({
 
       {/* Right - Actions */}
       <div className="flex items-center gap-2 w-80 justify-end">
+        {/* Version badge */}
+        <div className="px-2 py-1 rounded-md bg-zinc-800 border border-zinc-700">
+          <span className="text-xs text-zinc-400 font-mono">v{getVersion()}</span>
+        </div>
+
         <button
           onClick={onNewProject}
           className="p-2 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-white"

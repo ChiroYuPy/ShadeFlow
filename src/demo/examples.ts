@@ -133,30 +133,49 @@ const checkerboard = graphOf(
 
 const clouds = graphOf(
   {
-    n1: note(0, -170, 'Noise gives a smooth random value for every position. A bigger scale means more, smaller blobs.'),
-    n2: note(520, -170, 'Adding a float to a vec2 adds it to both X and Y: the noise drifts diagonally as time passes.'),
-    n3: note(1040, -190, 'The noise value (0…1) drives the Mix between two colors.'),
-    uv: { type: 'uv', x: 0, y: 0 },
-    scale: { type: 'multiply', x: 260, y: 0, values: { b: [5] } },
+    n1: note(0, -200, 'Centered UV scaled by 3.5 makes the cloud field. Time, added to both X and Y, slowly drifts it.'),
+    n2: note(780, -230, 'Fractal Noise stacks 5 layers of Noise, each twice as detailed and weaker than the last. That is what makes blobs look like real clouds.'),
+    n3: note(1300, -250, 'Smoothstep keeps only the dense part of the noise as a cloud mask: 0 is clear sky, 1 is full cloud.'),
+    n4: note(0, 720, 'UV Y, from 0 at the bottom to 1 at the top, mixes a pale horizon into a deeper blue.'),
+    n5: note(1820, 500, 'Dense cores get a bluish shadow, thin edges stay white. A last Mix puts the clouds over the sky.'),
+    c: { type: 'centered-uv', x: 0, y: 0 },
+    scale: { type: 'multiply', x: 260, y: 0, values: { b: [3.5] } },
     t: { type: 'time', x: 0, y: 300 },
-    slow: { type: 'multiply', x: 260, y: 300, values: { b: [0.2] } },
-    off: { type: 'add', x: 520, y: 100 },
-    nz: { type: 'noise', x: 780, y: 100 },
-    colorA: { type: 'color', x: 780, y: 330, values: { color: [0.05, 0.1, 0.35] } },
-    colorB: { type: 'color', x: 780, y: 560, values: { color: [0.95, 0.85, 0.7] } },
-    mix: { type: 'mix', x: 1040, y: 60 },
-    out: { type: 'output', x: 1300, y: 60 },
+    slow: { type: 'multiply', x: 260, y: 300, values: { b: [0.04] } },
+    off: { type: 'add', x: 520, y: 80 },
+    fbm: { type: 'fractal-noise', x: 780, y: 80 },
+    mask: { type: 'smoothstep', x: 1040, y: 0, values: { edge0: [0.38], edge1: [0.62] } },
+    core: { type: 'smoothstep', x: 1040, y: 280, values: { edge0: [0.55], edge1: [0.85] } },
+    uv: { type: 'uv', x: 0, y: 800 },
+    sp: { type: 'split', x: 260, y: 800 },
+    horizon: { type: 'color', x: 520, y: 1000, values: { color: [0.75, 0.88, 0.98] } },
+    zenith: { type: 'color', x: 520, y: 1200, values: { color: [0.12, 0.35, 0.78] } },
+    sky: { type: 'mix', x: 780, y: 840 },
+    white: { type: 'color', x: 1040, y: 560, values: { color: [1, 1, 1] } },
+    shade: { type: 'color', x: 1040, y: 760, values: { color: [0.52, 0.6, 0.78] } },
+    tone: { type: 'mix', x: 1300, y: 600 },
+    final: { type: 'mix', x: 1560, y: 360 },
+    out: { type: 'output', x: 1820, y: 360 },
   },
   [
-    'uv.uv > scale.a',
+    'c.uv > scale.a',
     't.time > slow.a',
     'scale.result > off.a',
     'slow.result > off.b',
-    'off.result > nz.position',
-    'colorA.color > mix.a',
-    'colorB.color > mix.b',
-    'nz.result > mix.t',
-    'mix.result > out.color',
+    'off.result > fbm.position',
+    'fbm.result > mask.x',
+    'fbm.result > core.x',
+    'uv.uv > sp.value',
+    'horizon.color > sky.a',
+    'zenith.color > sky.b',
+    'sp.y > sky.t',
+    'white.color > tone.a',
+    'shade.color > tone.b',
+    'core.result > tone.t',
+    'sky.result > final.a',
+    'tone.result > final.b',
+    'mask.result > final.t',
+    'final.result > out.color',
   ],
 )
 
@@ -305,6 +324,69 @@ const waves = graphOf(
 )
 
 /**
+ * The showpiece: a domain-warped palette. Noise bends the space, distance from the center
+ * becomes a color through a cosine palette, and a vignette darkens the corners.
+ */
+const liquidMarble = graphOf(
+  {
+    n1: note(0, -190, 'Centered UV, scaled by 3 and nudged by time, feeds the Noise: a slowly drifting field of smooth random blobs.'),
+    n2: note(780, -190, 'The noise bends the space: it is added to the position before measuring the distance from the center. That is domain warping.'),
+    n3: note(1560, -240, 'Distance + noise − time goes through a Cosine Palette: one number becomes a smooth color. Try editing D!'),
+    n4: note(260, 1070, 'Smoothstep turns the distance from the center into a mask, One Minus flips it, and Multiply darkens the corners: a vignette.'),
+    c: { type: 'centered-uv', x: 0, y: 0 },
+    big: { type: 'multiply', x: 260, y: 0, values: { b: [3] } },
+    t: { type: 'time', x: 0, y: 330 },
+    drift: { type: 'multiply', x: 260, y: 330, values: { b: [0.15] } },
+    off: { type: 'add', x: 520, y: 60 },
+    nz: { type: 'noise', x: 780, y: 60 },
+    twice: { type: 'multiply', x: 260, y: 600, values: { b: [2] } },
+    bend: { type: 'multiply', x: 1040, y: 60, values: { b: [0.6] } },
+    warp: { type: 'add', x: 1040, y: 330 },
+    len: { type: 'length', x: 1300, y: 330 },
+    rings: { type: 'multiply', x: 1560, y: 330, values: { b: [0.7] } },
+    sum: { type: 'add', x: 1820, y: 200 },
+    slow: { type: 'multiply', x: 1560, y: 600, values: { b: [0.05] } },
+    flow: { type: 'subtract', x: 2080, y: 200 },
+    pal: {
+      type: 'cosine-palette',
+      x: 2340,
+      y: 100,
+      values: { a: [0.5, 0.5, 0.5], b: [0.5, 0.5, 0.5], c: [0.6, 0.6, 0.6], d: [0, 0.15, 0.3] },
+    },
+    clen: { type: 'length', x: 260, y: 860 },
+    edge: { type: 'smoothstep', x: 520, y: 860, values: { edge0: [0.35], edge1: [1] } },
+    inv: { type: 'one-minus', x: 780, y: 860 },
+    dim: { type: 'multiply', x: 2600, y: 300 },
+    out: { type: 'output', x: 2860, y: 300 },
+  },
+  [
+    'c.uv > big.a',
+    't.time > drift.a',
+    'big.result > off.a',
+    'drift.result > off.b',
+    'off.result > nz.position',
+    'c.uv > twice.a',
+    'nz.result > bend.a',
+    'twice.result > warp.a',
+    'bend.result > warp.b',
+    'warp.result > len.value',
+    'len.result > rings.a',
+    'rings.result > sum.a',
+    'nz.result > sum.b',
+    't.time > slow.a',
+    'sum.result > flow.a',
+    'slow.result > flow.b',
+    'flow.result > pal.t',
+    'c.uv > clen.value',
+    'clen.result > edge.x',
+    'edge.result > inv.x',
+    'pal.color > dim.a',
+    'inv.result > dim.b',
+    'dim.result > out.color',
+  ],
+)
+
+/**
  * Examples are there to be read: every node that can show a preview does (nodes you add
  * yourself start without one, like in Blender).
  */
@@ -320,6 +402,7 @@ function withPreviews(graph: Graph): Graph {
 }
 
 export const EXAMPLES: Example[] = [
+  { id: 'liquid-marble', name: 'Liquid marble', description: 'Noise-warped space and a color palette', graph: withPreviews(liquidMarble) },
   { id: 'sliding-gradient', name: 'Sliding gradient', description: 'UV, time and a color mix', graph: withPreviews(slidingGradient) },
   { id: 'rings', name: 'Rings', description: 'Distance and waves', graph: withPreviews(rings) },
   { id: 'checkerboard', name: 'Checkerboard', description: 'Floor, mod and rotation', graph: withPreviews(checkerboard) },
@@ -332,4 +415,4 @@ export const EXAMPLES: Example[] = [
 ]
 
 /** What a first-time visitor sees. */
-export const DEFAULT_GRAPH: Graph = EXAMPLES[0].graph
+export const DEFAULT_GRAPH: Graph = withPreviews(slidingGradient)

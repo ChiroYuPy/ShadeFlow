@@ -23,7 +23,7 @@ const NOISE = `fn sf_hash(p_in: vec2<f32>) -> f32 {
 fn sf_noise(p: vec2<f32>) -> f32 {
   let i = floor(p);
   let f = fract(p);
-  let s = f * f * (3.0 - 2.0 * f);
+  let s = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
   return mix(
     mix(sf_hash(i), sf_hash(i + vec2<f32>(1.0, 0.0)), s.x),
     mix(sf_hash(i + vec2<f32>(0.0, 1.0)), sf_hash(i + vec2<f32>(1.0, 1.0)), s.x),

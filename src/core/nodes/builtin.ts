@@ -359,4 +359,29 @@ export const BUILTIN_NODES: NodeDef[] = [
     outputs: [{ name: 'result', label: 'Result', type: 'float' }],
     lower: ({ b, inputs }) => ({ result: b.op('noise', [inputs.position]) }),
   },
+  {
+    type: 'fractal-noise',
+    label: 'Fractal Noise',
+    description:
+      'Several layers of Noise added together: each layer is twice as detailed and weaker than the one before. This is how clouds, smoke and terrain get their natural look. Gain is how much of each layer is kept (lower is smoother).',
+    category: 'math',
+    inputs: [{ name: 'position', label: 'Position', type: 'vec2', default: [0, 0] }, float('gain', 'Gain', 0.5)],
+    outputs: [{ name: 'result', label: 'Result', type: 'float' }],
+    lower: ({ b, inputs: v }) => {
+      const one = (x: number) => b.constant('float', [x])
+      const pair = (x: number, y: number) => b.constant('vec2', [x, y])
+      let position = v.position
+      let weight = one(1)
+      let sum = b.op('noise', [position])
+      let total = weight
+      // 4 more layers: zoom in (×2.03, a bit more than 2 so the grids never line up) and shift
+      for (let octave = 1; octave < 5; octave++) {
+        position = b.op('add', [b.op('mul', [position, pair(2.03, 2.03)]), pair(17.3, 9.1)])
+        weight = b.op('mul', [weight, v.gain])
+        sum = b.op('add', [sum, b.op('mul', [b.op('noise', [position]), weight])])
+        total = b.op('add', [total, weight])
+      }
+      return { result: b.op('div', [sum, total]) }
+    },
+  },
 ]

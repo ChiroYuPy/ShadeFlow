@@ -3,6 +3,8 @@
 A node-based shader editor for the web. Build a shader by connecting nodes, see every
 intermediate result live, and read the code it generates — to learn how shaders work.
 
+**Try it: https://chiroyupy.github.io/ShadeFlow/**
+
 - **Node graph** where any node can show its live result (eye icon), with a description for each one,
   and a node library that previews what a node does before you add it
 - **Generated code** in GLSL, WGSL and HLSL, from one language-independent IR

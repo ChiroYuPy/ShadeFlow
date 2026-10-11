@@ -35,8 +35,8 @@ function noise(px: number, py: number): number {
   const iy = Math.floor(py)
   const fx = fract(px)
   const fy = fract(py)
-  const ux = fx * fx * (3 - 2 * fx)
-  const uy = fy * fy * (3 - 2 * fy)
+  const ux = fx * fx * fx * (fx * (fx * 6 - 15) + 10)
+  const uy = fy * fy * fy * (fy * (fy * 6 - 15) + 10)
   const mix = (a: number, b: number, t: number) => a + (b - a) * t
   return mix(
     mix(hash(ix, iy), hash(ix + 1, iy), ux),

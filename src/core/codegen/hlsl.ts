@@ -20,7 +20,7 @@ const NOISE = `float sf_hash(float2 p) {
 float sf_noise(float2 p) {
   float2 i = floor(p);
   float2 f = frac(p);
-  float2 u = f * f * (3.0 - 2.0 * f);
+  float2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
   return lerp(
     lerp(sf_hash(i), sf_hash(i + float2(1.0, 0.0)), u.x),
     lerp(sf_hash(i + float2(0.0, 1.0)), sf_hash(i + float2(1.0, 1.0)), u.x),

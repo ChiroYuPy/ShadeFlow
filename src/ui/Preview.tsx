@@ -24,15 +24,17 @@ export function Preview({ code, onStatus, failed }: PreviewProps) {
         aria-label="Open preview fullscreen"
         onClick={() => setFullscreen(true)}
         className={cn(
-          'group absolute top-3 right-3 aspect-video w-44 cursor-pointer overflow-hidden rounded-xl border bg-card shadow-lg sm:top-4 sm:right-4 sm:w-64',
+          'group absolute top-3 right-3 w-40 cursor-pointer overflow-hidden rounded-xl border bg-card text-left shadow-lg transition-colors hover:border-ring sm:top-4 sm:right-4 sm:w-56',
           failed && 'border-destructive',
         )}
       >
-        <ShaderCanvas code={code} onStatus={onStatus} />
-        <span className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/60 to-transparent px-2.5 pt-4 pb-1.5 text-xs text-white/80">
-          <span>{failed ? 'Cannot display' : 'Result'}</span>
+        <div className="aspect-square w-full bg-background">
+          <ShaderCanvas code={code} onStatus={onStatus} />
+        </div>
+        <div className="flex h-7 items-center justify-between border-t px-2.5 text-xs text-muted-foreground">
+          <span className={cn(failed && 'text-destructive')}>{failed ? 'Cannot display' : 'Result'}</span>
           <Maximize2 className="size-3.5 opacity-60 transition-opacity group-hover:opacity-100" />
-        </span>
+        </div>
       </button>
 
       {fullscreen && (

@@ -1,0 +1,166 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+/*
+ * ShadeFlow theme — single source of truth for every color in the app.
+ * Dark only: values live in :root and the <html> element is never toggled.
+ * Port colors are defined here too so the node editor, wires and code
+ * previews all share the same palette (use `bg-port-vec3`, `text-port-float`…).
+ */
+
+@theme inline {
+  --font-sans: 'Geist Variable', sans-serif;
+  --font-heading: var(--font-sans);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-selection: var(--selection);
+
+  /* Editor surfaces */
+  --color-canvas: var(--canvas);
+  --color-canvas-dot: var(--canvas-dot);
+  --color-node: var(--node);
+  --color-node-header: var(--node-header);
+  --color-node-border: var(--node-border);
+
+  /* Node categories: a thin tint on the node header */
+  --color-cat-input: var(--cat-input);
+  --color-cat-constant: var(--cat-constant);
+  --color-cat-vector: var(--cat-vector);
+  --color-cat-color: var(--cat-color);
+  --color-cat-math: var(--cat-math);
+  --color-cat-output: var(--cat-output);
+
+  /* Port / wire colors, one per IR type */
+  --color-port-float: var(--port-float);
+  --color-port-vec2: var(--port-vec2);
+  --color-port-vec3: var(--port-vec3);
+  --color-port-vec4: var(--port-vec4);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+:root {
+  color-scheme: dark;
+
+  --handle-size: 17px;
+
+  --background: oklch(0.16 0 0);
+  --foreground: oklch(0.96 0 0);
+  --card: oklch(0.2 0 0);
+  --card-foreground: oklch(0.96 0 0);
+  --popover: oklch(0.2 0 0);
+  --popover-foreground: oklch(0.96 0 0);
+  --primary: oklch(0.92 0 0);
+  --primary-foreground: oklch(0.2 0 0);
+  --secondary: oklch(0.27 0 0);
+  --secondary-foreground: oklch(0.96 0 0);
+  --muted: oklch(0.27 0 0);
+  --muted-foreground: oklch(0.7 0 0);
+  --accent: oklch(0.27 0 0);
+  --accent-foreground: oklch(0.96 0 0);
+  --destructive: oklch(0.7 0.19 22);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  /* The one accent: what is selected, active or focused. Violet, brighter than the Vector category tint. */
+  --selection: oklch(0.76 0.14 295);
+  --ring: var(--selection);
+  --radius: 0.625rem;
+
+  --canvas: oklch(0.14 0 0);
+  --canvas-dot: oklch(1 0 0 / 8%);
+  --node: oklch(0.21 0 0);
+  --node-header: oklch(0.25 0 0);
+  --node-border: oklch(1 0 0 / 16%);
+
+  --cat-input: oklch(0.68 0.14 25);
+  --cat-constant: oklch(0.65 0.05 250);
+  --cat-vector: oklch(0.66 0.13 290);
+  --cat-color: oklch(0.8 0.13 90);
+  --cat-math: oklch(0.7 0.12 165);
+  --cat-output: oklch(0.68 0.17 10);
+
+  --port-float: oklch(0.72 0.14 245);
+  --port-vec2: oklch(0.78 0.14 150);
+  --port-vec3: oklch(0.78 0.13 80);
+  --port-vec4: oklch(0.72 0.17 320);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body {
+    @apply h-full;
+  }
+  #root {
+    height: 100dvh; /* tracks the mobile browser toolbars */
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    overscroll-behavior: none; /* no pull-to-refresh while panning the canvas */
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* React Flow, themed from the variables above (kept unlayered so it wins over its stylesheet). */
+.react-flow {
+  --xy-background-color: var(--canvas);
+  --xy-node-background-color: transparent;
+  --xy-node-border: none;
+  --xy-node-border-radius: 0;
+  --xy-node-boxshadow-selected: none;
+  --xy-connectionline-stroke: var(--muted-foreground);
+  --xy-selection-background-color: color-mix(in oklab, var(--selection) 8%, transparent);
+  --xy-selection-border: 1px solid var(--selection);
+  /* Node outline: the same 1.5px on screen at any zoom (--zoom is set by the editor). */
+  --node-ring: calc(1.5px / var(--zoom, 1));
+}
+.react-flow__node {
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+@media (pointer: coarse) {
+  /*
+   * Touch: the controls of a node (fields, pickers, buttons) only react once the node is
+   * selected. Until then a touch on them is a touch on the node, so it selects it or pans
+   * the view and never changes a value by accident.
+   */
+  .react-flow__node:not(.selected) .nodrag {
+    pointer-events: none;
+  }
+}
+
+/* The visible pin is small; its touchable area is larger. */
+.react-flow__handle::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}

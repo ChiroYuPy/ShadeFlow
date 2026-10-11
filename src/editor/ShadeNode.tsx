@@ -1,0 +1,164 @@
+import { createElement, memo } from 'react'
+import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
+import { ChevronDown, Eye, EyeOff } from 'lucide-react'
+import { coerceConstant, concreteType, getNodeDef, type ValueType } from '@/core'
+import { cn } from '@/lib/utils'
+import { editValue, useGraphStore } from '@/store/graphStore'
+import { useUIStore } from '@/store/uiStore'
+import { NodePreview } from './NodePreview'
+import { CATEGORY_TEXT, nodeIcon } from './nodeLook'
+import { PortValue } from './ValueFields'
+
+type NodeData = {
+  nodeType: string
+  /** Resolved type of the node's generic ports. */
+  genType: ValueType
+  /** Values of unwired inputs, as stored in the graph. */
+  values: Record<string, number[]>
+  /** Names of inputs that have a wire. */
+  connected: string[]
+  /** The node shows its live preview. */
+  showPreview: boolean
+  /** Folded: only the header and the plugs in use remain. */
+  collapsed: boolean
+  /** Output shown in the node's preview. */
+  previewPort: string
+  /** Compile error attached to this node, if any. */
+  error?: string
+}
+
+export type ShadeFlowNode = Node<NodeData, 'shade'>
+
+/** Pins are centered on the middle of the node's ring, which sits just outside the box. */
+const PIN_OFFSET = 'calc(var(--node-ring) / -2)'
+
+const handleStyle = (type: ValueType, side: 'left' | 'right') => ({
+  width: 'var(--handle-size)',
+  height: 'var(--handle-size)',
+  background: `var(--port-${type})`,
+  border: '2px solid var(--node)',
+  [side]: PIN_OFFSET,
+})
+
+function ShadeNodeImpl({ id, data, selected }: NodeProps<ShadeFlowNode>) {
+  const previewsEnabled = useUIStore((s) => s.nodePreviews)
+  const def = getNodeDef(data.nodeType)
+  if (!def) {
+    return <div className="rounded-lg border border-destructive bg-node px-3 py-2 text-sm">Unknown node</div>
+  }
+
+  // The Output node is a sink: its single "output" only feeds the compiler.
+  const outputs = def.type === 'output' ? [] : def.outputs
+  const canPreview = def.type !== 'output' && def.preview !== 'none'
+  const showPreview = previewsEnabled && canPreview && data.showPreview && !data.collapsed
+  const store = useGraphStore.getState
+
+  return (
+    <div
+      title={def.description}
+      // The outline is a ring (outside the box) rather than a border, so the header can be
+      // flush with the node's rounded corners.
+      className={cn(
+        'w-52 rounded-xl bg-node text-sm shadow-lg ring-[length:var(--node-ring)] ring-node-border',
+        selected && 'ring-selection',
+        data.error && 'ring-destructive',
+      )}
+    >
+      <div className="flex h-9 items-center gap-2 rounded-t-xl bg-node-header pr-2 pl-2 font-medium">
+        {createElement(nodeIcon(def.type), { className: cn('size-5 shrink-0', CATEGORY_TEXT[def.category]) })}
+        <span className="min-w-0 flex-1 truncate">{def.label}</span>
+        {previewsEnabled && canPreview && (
+          <button
+            type="button"
+            aria-label={data.showPreview ? 'Hide preview' : 'Show preview'}
+            title={data.showPreview ? 'Hide preview' : 'Show preview'}
+            className={cn(
+              'nodrag flex size-5 shrink-0 items-center justify-center rounded hover:text-foreground',
+              data.showPreview ? 'text-foreground' : 'text-muted-foreground',
+            )}
+            onClick={() => store().togglePreview(id)}
+          >
+            {data.showPreview ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+          </button>
+        )}
+        <button
+          type="button"
+          aria-label={data.collapsed ? 'Unfold node' : 'Fold node'}
+          title={data.collapsed ? 'Unfold' : 'Fold'}
+          className="nodrag flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+          onClick={() => store().toggleCollapsed(id)}
+        >
+          <ChevronDown className={cn('size-4 transition-transform', data.collapsed && '-rotate-90')} />
+        </button>
+      </div>
+
+      {data.error && <div className="px-3 pt-1.5 text-xs text-destructive">{data.error}</div>}
+      {showPreview && (
+        <div className="px-2 pt-2">
+          <NodePreview nodeId={id} />
+        </div>
+      )}
+
+      <div className="py-1.5">
+        {outputs.map((port) => {
+          // With several outputs, the label picks which one the preview shows.
+          const pickable = showPreview && outputs.length > 1
+          const active = pickable && port.name === data.previewPort
+          return (
+            <div key={port.name} className="relative flex h-7 items-center justify-end px-3">
+              <span
+                className={cn(
+                  'flex items-center gap-1.5',
+                  active ? 'text-foreground' : 'text-muted-foreground',
+                  pickable && 'nodrag cursor-pointer hover:text-foreground',
+                )}
+                title={pickable ? 'Show this output in the preview' : undefined}
+                onClick={pickable ? () => store().setPreviewPort(id, port.name) : undefined}
+              >
+                {active && <span className="size-1.5 rounded-full bg-foreground" />}
+                {port.label}
+              </span>
+              <Handle
+                id={port.name}
+                type="source"
+                position={Position.Right}
+                style={handleStyle(concreteType(port.type, data.genType), 'right')}
+              />
+            </div>
+          )
+        })}
+
+        {def.inputs.map((port) => {
+          const type = concreteType(port.type, data.genType)
+          const connectable = port.connectable !== false
+          const wired = data.connected.includes(port.name)
+          // Folded nodes keep only the plugs that are in use.
+          if (data.collapsed && !wired) return null
+
+          const editable = !connectable || !wired
+          const value = coerceConstant(data.values[port.name] ?? port.default, type)
+
+          // One row per input: its label, then (when nothing is wired in) its value.
+          return (
+            <div key={port.name} className="relative flex h-7 items-center gap-2 px-3">
+              {connectable && (
+                <Handle id={port.name} type="target" position={Position.Left} style={handleStyle(type, 'left')} />
+              )}
+              <span className="shrink-0 text-muted-foreground">{port.label}</span>
+              {editable && (
+                <PortValue
+                  type={type}
+                  widget={port.widget}
+                  value={value}
+                  onChange={(v) => editValue(id, port.name, v)}
+                />
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+export const ShadeNode = memo(ShadeNodeImpl)

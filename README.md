@@ -1,18 +1,16 @@
 # ShadeFlow
 
-A node-based shader editor for the web. Build a shader by connecting nodes, see every
-intermediate result live, and read the code it generates — to learn how shaders work.
+A node-based shader editor that runs in your browser. Connect nodes to build a shader, see
+every intermediate result live, and read the code it generates — to learn how shaders work.
 
-**Try it: https://chiroyupy.github.io/ShadeFlow/**
+## 👉 [**Open ShadeFlow — chiroyupy.github.io/ShadeFlow**](https://chiroyupy.github.io/ShadeFlow/)
 
-- **Node graph** where any node can show its live result (eye icon), with a description for each one,
-  and a node library that previews what a node does before you add it
-- **Generated code** in GLSL, WGSL and HLSL, from one language-independent IR
-- **Examples** with explanatory notes (gradients, rings, checkerboard, clouds, rainbow…)
-- **Comfortable editing**: undo/redo, copy/paste/duplicate, drag numbers to change them,
-  drop a wire on empty space to add a node that fits, notes for your own explanations
-- **Runs 100% in the browser**: projects are autosaved locally and can be exported as JSON
-- Press **?** in the app for the list of gestures and shortcuts
+Nothing to install, no account: that link is the app itself.
+
+- **Node graph** with a live preview on any node and a description for each one
+- **Generated code** in GLSL, WGSL and HLSL
+- **Examples** with explanatory notes
+- **Everything stays local**: projects autosave in your browser and export as JSON
 
 ## Development
 
@@ -41,8 +39,6 @@ Graph (UI, React Flow) → graph model → IR (typed) → code generator → GLS
 | `src/index.css` | The theme: the single place where colors are defined |
 
 Only GLSL is executed (WebGL2). WGSL and HLSL are generated for reading and export.
-
-See `CLAUDE.md` for the invariants of the codebase and how to add nodes, ops and languages.
 
 ## Deployment
 

@@ -23,9 +23,13 @@ dist-ssr
 *.sln
 *.sw?
 
-# Unrelated earlier attempt (see CLAUDE.md)
+# Unrelated earlier attempt
 .SF/
 
 # Test artifacts
 coverage
 *.tsbuildinfo
+
+# Local assistant instructions
+CLAUDE.md
+.claude/

@@ -1,23 +1,57 @@
 import { useMemo, useRef, type ComponentProps } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useStore } from 'zustand'
-import { BookOpen, CircleHelp, Code, CopyPlus, Download, Eye, FilePlus, Hand, Menu, Minus, MousePointer2, Plus, Redo2, Scan, Trash2, Undo2, Upload } from 'lucide-react'
+import {
+  BookOpen,
+  CircleHelp,
+  Code,
+  Copy,
+  CopyPlus,
+  Download,
+  Eye,
+  EyeOff,
+  FilePlus,
+  FoldVertical,
+  Hand,
+  Menu,
+  Minus,
+  Monitor,
+  MousePointer2,
+  Plus,
+  Redo2,
+  Scan,
+  Trash2,
+  Undo2,
+  UnfoldVertical,
+  Upload,
+  X,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { EXAMPLES } from '@/demo/examples'
-import { confirmReplace, deleteSelection, duplicateSelection, loadGraph, newProject, openProjectFile, saveProjectFile } from '@/store/fileActions'
+import {
+  confirmReplace,
+  copyToClipboard,
+  deleteSelection,
+  describeSelection,
+  duplicateSelection,
+  newProject,
+  openProjectFile,
+  saveProjectFile,
+  toggleSelectionFold,
+  toggleSelectionPreviews,
+} from '@/store/fileActions'
 import { redo, undo, useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
+import { Presence } from './Presence'
+import { useLast } from './useLast'
+import { FIT_VIEW } from './view'
 
 const BAR = 'absolute flex items-center gap-1 rounded-xl border bg-card/90 p-1 shadow-lg backdrop-blur'
 
@@ -39,7 +73,10 @@ function Tool({ label, shortcut, active, ...props }: ComponentProps<typeof Butto
 
 const Divider = () => <span className="mx-1 h-5 w-px bg-border" />
 
-/** Top left: the project (new, examples, files) and the history. */
+const Shortcut = ({ children }: { children: string }) => <span className="ml-auto pl-4 text-xs text-muted-foreground">{children}</span>
+
+
+/** Top left: the project (new, examples, files, help) and the history. */
 function ProjectBar() {
   const { fitView } = useReactFlow()
   const canUndo = useStore(useGraphStore.temporal, (s) => s.pastStates.length > 0)
@@ -47,7 +84,7 @@ function ProjectBar() {
   const fileInput = useRef<HTMLInputElement>(null)
 
   // A new project replaces the whole graph: bring it into view once it is measured.
-  const fitSoon = () => setTimeout(() => fitView({ padding: 0.3, minZoom: 0.5, duration: 300 }), 120)
+  const fitSoon = () => setTimeout(() => void fitView(FIT_VIEW), 120)
 
   return (
     <div className={cn(BAR, 'top-3 left-3 sm:top-4 sm:left-4')}>
@@ -68,35 +105,21 @@ function ProjectBar() {
           >
             <FilePlus /> New project
           </DropdownMenuItem>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <BookOpen /> Examples
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              {EXAMPLES.map((example) => (
-                <DropdownMenuItem
-                  key={example.id}
-                  onSelect={() =>
-                    confirmReplace(`Open the “${example.name}” example?`, () => {
-                      loadGraph(example.graph)
-                      fitSoon()
-                    })
-                  }
-                >
-                  <span className="flex flex-col">
-                    <span>{example.name}</span>
-                    <span className="text-xs text-muted-foreground">{example.description}</span>
-                  </span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
+          <DropdownMenuItem onSelect={() => useUIStore.getState().setExamplesOpen(true)}>
+            <BookOpen /> Examples…
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => confirmReplace('Open a project file?', () => fileInput.current?.click())}>
             <Upload /> Open file…
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={saveProjectFile}>
             <Download /> Save to file
+            <Shortcut>Ctrl+S</Shortcut>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => useUIStore.getState().setHelpOpen(true)}>
+            <CircleHelp /> Help and shortcuts
+            <Shortcut>?</Shortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -122,37 +145,30 @@ function ProjectBar() {
   )
 }
 
-/** Zoom column (same on every device): zoom in, zoom out, fit the graph. */
+/** Bottom right: zoom in, zoom out, fit the graph. A touch screen pinches to zoom: only "fit" is left there. */
 function ZoomBar() {
   const { zoomIn, zoomOut, fitView } = useReactFlow()
 
   return (
-    <div className={cn(BAR, 'right-3 bottom-20 flex-col sm:right-4 sm:bottom-4')}>
-      <Tool label="Zoom in" onClick={() => void zoomIn({ duration: 150 })}>
+    <div className={cn(BAR, 'right-3 bottom-4 flex-col sm:right-4')}>
+      <Tool label="Zoom in" className="pointer-coarse:hidden" onClick={() => void zoomIn({ duration: 150 })}>
         <Plus />
       </Tool>
-      <Tool label="Zoom out" onClick={() => void zoomOut({ duration: 150 })}>
+      <Tool label="Zoom out" className="pointer-coarse:hidden" onClick={() => void zoomOut({ duration: 150 })}>
         <Minus />
       </Tool>
-      <Tool label="Fit graph in view" onClick={() => void fitView({ padding: 0.3, minZoom: 0.5, duration: 300 })}>
+      <Tool label="Fit graph in view" shortcut="F" onClick={() => void fitView(FIT_VIEW)}>
         <Scan />
       </Tool>
     </div>
   )
 }
 
-/** Bottom center: tools and what is shown. Duplicate / delete appear once something is selected. */
+/** Bottom center: add a node, the tool in hand, and the panels to show (result, code). It never changes size. */
 function MainBar() {
   const tool = useUIStore((s) => s.tool)
   const codeOpen = useUIStore((s) => s.codeOpen)
-  const nodePreviews = useUIStore((s) => s.nodePreviews)
-  // Selected ids can outlive their nodes (after an undo): only count what still exists.
-  const selected = useUIStore((s) => s.selected)
-  const graph = useGraphStore((s) => s.graph)
-  const hasSelection = useMemo(
-    () => [...selected].some((id) => id in graph.nodes || graph.edges.some((e) => e.id === id)),
-    [selected, graph],
-  )
+  const resultOpen = useUIStore((s) => s.resultOpen)
 
   return (
     <div className={cn(BAR, 'bottom-4 left-1/2 -translate-x-1/2')}>
@@ -166,27 +182,62 @@ function MainBar() {
       <Tool label="Select: drag a rectangle" shortcut="V" active={tool === 'select'} onClick={() => useUIStore.getState().setTool('select')}>
         <MousePointer2 />
       </Tool>
-      {hasSelection && (
-        <>
-          <Tool label="Duplicate selection" shortcut="Ctrl+D" onClick={duplicateSelection}>
-            <CopyPlus />
-          </Tool>
-          <Tool label="Delete selection" shortcut="Del" onClick={deleteSelection}>
-            <Trash2 />
-          </Tool>
-        </>
-      )}
       <Divider />
-      <Tool label="Node previews" active={nodePreviews} onClick={() => useUIStore.getState().toggleNodePreviews()}>
-        <Eye />
+      <Tool label="Result preview" active={resultOpen} onClick={() => useUIStore.getState().toggleResult()}>
+        <Monitor />
       </Tool>
       <Tool label="Generated code" active={codeOpen} onClick={() => useUIStore.getState().toggleCode()}>
         <Code />
       </Tool>
-      <Tool label="Help and shortcuts" shortcut="?" onClick={() => useUIStore.getState().setHelpOpen(true)}>
-        <CircleHelp />
-      </Tool>
     </div>
+  )
+}
+
+/**
+ * Just above the main bar, while something is selected: what can be done with it. Everything here
+ * is also in the right-click menu, but a touch screen has no right click and no keyboard.
+ */
+function SelectionBar() {
+  const selected = useUIStore((s) => s.selected)
+  const graph = useGraphStore((s) => s.graph)
+  // Selected ids can outlive their nodes (after an undo): only what still exists counts.
+  const current = useMemo(() => describeSelection(graph, selected), [graph, selected])
+  const show = current.count > 0
+  // While the bar leaves, it keeps showing the selection it was about.
+  const selection = useLast(current, show)
+
+  return (
+    <Presence show={show} from="bottom" className={cn(BAR, 'bottom-[4.5rem] left-1/2 -translate-x-1/2')} role="toolbar" aria-label="Selection">
+      <span className="px-2 text-sm whitespace-nowrap text-muted-foreground tabular-nums">{selection.count} selected</span>
+      <Divider />
+      {selection.previewable.length > 0 && (
+        <Tool label={selection.showPreviews ? 'Show preview' : 'Hide preview'} onClick={toggleSelectionPreviews}>
+          {selection.showPreviews ? <Eye /> : <EyeOff />}
+        </Tool>
+      )}
+      {selection.nodes.length > 0 && (
+        <Tool label={selection.fold ? 'Fold' : 'Unfold'} onClick={toggleSelectionFold}>
+          {selection.fold ? <FoldVertical /> : <UnfoldVertical />}
+        </Tool>
+      )}
+      {selection.copyable && (
+        <>
+          <Tool label="Duplicate selection" shortcut="Ctrl+D" onClick={duplicateSelection}>
+            <CopyPlus />
+          </Tool>
+          <Tool label="Copy selection" shortcut="Ctrl+C" onClick={() => void copyToClipboard()}>
+            <Copy />
+          </Tool>
+        </>
+      )}
+      <Tool label="Delete selection" shortcut="Del" disabled={!selection.removable} onClick={deleteSelection}>
+        <Trash2 />
+      </Tool>
+      <Divider />
+      <Tool label="Deselect" shortcut="Esc" onClick={() => useUIStore.getState().setSelection([])}>
+        <X />
+      </Tool>
+    </Presence>
   )
 }
 
@@ -194,6 +245,7 @@ export function Toolbar() {
   return (
     <>
       <ProjectBar />
+      <SelectionBar />
       <MainBar />
       <ZoomBar />
     </>

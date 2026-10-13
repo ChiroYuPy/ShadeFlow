@@ -1,6 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { cn } from '@/lib/utils'
-import { previewHub, PREVIEW_HEIGHT, PREVIEW_WIDTH } from '@/render/previewHub'
+import { previewHub, PREVIEW_SIZE } from '@/render/previewHub'
 
 function ImagePreview({ nodeId, className }: { nodeId: string; className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -8,9 +8,9 @@ function ImagePreview({ nodeId, className }: { nodeId: string; className?: strin
   return (
     <canvas
       ref={ref}
-      width={PREVIEW_WIDTH}
-      height={PREVIEW_HEIGHT}
-      className={cn('block h-16 w-full rounded-md bg-background', className)}
+      width={PREVIEW_SIZE}
+      height={PREVIEW_SIZE}
+      className={cn('block aspect-square w-full rounded-md bg-background', className)}
     />
   )
 }

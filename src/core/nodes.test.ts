@@ -123,9 +123,108 @@ describe('what nodes compute', () => {
     expect(b).toBeCloseTo(0.5 + 0.5 * Math.cos(2 * Math.PI * 0.67), 3)
   })
 
-  it('Rotate turns a position counter-clockwise', () => {
-    close(run('rotate', { position: [1, 0], angle: [Math.PI / 2] }, {}, 'position').slice(0, 2), [0, 1])
-    close(run('rotate', { position: [1, 1], angle: [Math.PI] }, {}, 'position').slice(0, 2), [-1, -1])
+  it('Rotate turns a position counter-clockwise, around its center', () => {
+    const origin = { center: [0, 0] }
+    close(run('rotate', { ...origin, angle: [Math.PI / 2] }, { uv: [1, 0] }, 'position').slice(0, 2), [0, 1])
+    close(run('rotate', { ...origin, angle: [Math.PI] }, { uv: [1, 1] }, 'position').slice(0, 2), [-1, -1])
+    // by default the center is the middle of the UV square, which therefore stays put
+    close(run('rotate', { angle: [1.2] }, { uv: [0.5, 0.5] }, 'position').slice(0, 2), [0.5, 0.5])
+    close(run('rotate', { angle: [Math.PI] }, { uv: [1, 0.5] }, 'position').slice(0, 2), [0, 0.5])
+  })
+
+  it('an unwired Position is the UV of the pixel', () => {
+    close(run('tile', { count: [4] }, { uv: [0.3, 0.8] }, 'position').slice(0, 2), [0.2, 0.2])
+    expect(run('circle', {}, { uv: [0.5, 0.5] })[0]).toBeCloseTo(1, 3)
+    expect(run('circle', {}, { uv: [0.95, 0.95] })[0]).toBeCloseTo(0, 3)
+  })
+
+  it('Polar Coordinates give the distance and the direction from the center', () => {
+    const polar = (uv: [number, number], port: string) => run('polar', {}, { uv }, port)[0]
+    expect(polar([1, 0.5], 'radius')).toBeCloseTo(0.5, 5)
+    expect(polar([1, 0.5], 'angle')).toBeCloseTo(0.5, 5) // right
+    expect(polar([0.5, 1], 'angle')).toBeCloseTo(0.75, 5) // top
+    expect(polar([0.5, 0], 'angle')).toBeCloseTo(0.25, 5) // bottom
+  })
+
+  it('Rectangle and Polygon are 1 inside and 0 outside', () => {
+    const rect = (uv: [number, number]) => run('rectangle', { size: [0.6, 0.2] }, { uv })[0]
+    expect(rect([0.5, 0.5])).toBeCloseTo(1, 3)
+    expect(rect([0.75, 0.55])).toBeCloseTo(1, 3)
+    expect(rect([0.75, 0.7])).toBeCloseTo(0, 3) // past the top side only
+    expect(rect([0.9, 0.5])).toBeCloseTo(0, 3)
+
+    // 4 sides: a square whose sides are at Radius from the center
+    const square = (uv: [number, number]) => run('polygon', { sides: [4], radius: [0.3] }, { uv })[0]
+    expect(square([0.5, 0.5])).toBeCloseTo(1, 3)
+    expect(square([0.75, 0.75])).toBeCloseTo(1, 3) // in the corner, where a circle would not reach
+    expect(square([0.85, 0.5])).toBeCloseTo(0, 3)
+    expect(square([0.5, 0.15])).toBeCloseTo(0, 3)
+  })
+
+  it('Random only depends on its seed and has no pattern', () => {
+    const at = (x: number, y: number) => run('random', {}, { uv: [x, y] })[0]
+    expect(at(0.25, 0.75)).toBe(at(0.25, 0.75))
+    const values: number[] = []
+    for (let x = 0; x < 40; x++) for (let y = 0; y < 40; y++) values.push(at(x, y))
+    expect(Math.min(...values)).toBeGreaterThanOrEqual(0)
+    expect(Math.max(...values)).toBeLessThan(1)
+    const mean = values.reduce((a, b) => a + b) / values.length
+    expect(mean).toBeGreaterThan(0.45)
+    expect(mean).toBeLessThan(0.55)
+    // neighbours are unrelated: on average they differ by a third, like two random numbers
+    let difference = 0
+    for (let i = 1; i < values.length; i++) difference += Math.abs(values[i] - values[i - 1])
+    expect(difference / (values.length - 1)).toBeGreaterThan(0.28)
+  })
+
+  it('Mouse gives the pointer in UV space and in Centered UV space', () => {
+    close(run('mouse', {}, { mouse: [0.2, 0.9] }, 'position').slice(0, 2), [0.2, 0.9])
+    close(run('mouse', {}, { mouse: [0.5, 0.5] }, 'centered').slice(0, 2), [0, 0])
+    // resolution is 200×100 in tests: X spans twice the height
+    close(run('mouse', {}, { mouse: [1, 1] }, 'centered').slice(0, 2), [1, 0.5])
+  })
+
+  it('Fisheye pushes positions away from the center, more as they are far from it', () => {
+    const at = (uv: [number, number], strength = 2) => run('fisheye', { strength: [strength] }, { uv }, 'position').slice(0, 2)
+    close(at([0.5, 0.5]), [0.5, 0.5]) // the center stays put
+    close(at([0.6, 0.5]), [0.5 + 0.1 * (1 + 2 * 0.01), 0.5])
+    close(at([1, 0.5]), [0.5 + 0.5 * (1 + 2 * 0.25), 0.5])
+    close(at([1, 0.5], 0), [1, 0.5]) // no strength, no change
+    close(at([1, 0.5], -1), [0.5 + 0.5 * 0.75, 0.5]) // negative: pinched
+  })
+
+  it('Tile also gives the number of the copy', () => {
+    close(run('tile', { count: [4] }, { uv: [0.3, 0.8] }, 'cell').slice(0, 2), [1, 3])
+  })
+
+  it('Noise scales its position', () => {
+    const at = (scale: number, uv: [number, number]) => run('noise', { scale: [scale] }, { uv })[0]
+    expect(at(10, [0.13, 0.27])).toBeCloseTo(at(1, [1.3, 2.7]), 5)
+    expect(at(5, [0.1, 0.1])).not.toBeCloseTo(at(5, [0.7, 0.9]), 2)
+  })
+
+  it('Step and Smoothstep take X first, whatever the order of the shader function', () => {
+    expect(getNodeDef('step')!.inputs[0].name).toBe('x')
+    expect(getNodeDef('smoothstep')!.inputs[0].name).toBe('x')
+    close(run('step', { x: [0.7], edge: [0.5] }), [1])
+    close(run('step', { x: [0.2], edge: [0.5] }), [0])
+    close(run('smoothstep', { x: [0.5], edge0: [0], edge1: [1] }), [0.5])
+    close(run('smoothstep', { x: [2], edge0: [0], edge1: [1] }), [1])
+  })
+
+  it('Fractal Noise has as many layers as Detail, within bounds', () => {
+    const layers = (detail: number) => {
+      const g = build()
+      const id = g.node('fractal-noise', { detail: [detail] })
+      const result = compileGraph(g.graph, { root: { nodeId: id, port: 'result' } })
+      if (!result.ok) throw new Error(result.diagnostics[0].message)
+      return generateGLSL(result.ir).split('void main()')[1].match(/sf_noise\(/g)!.length
+    }
+    expect(layers(1)).toBe(1)
+    expect(layers(3)).toBe(3)
+    expect(layers(2.6)).toBe(3)
+    expect(layers(0)).toBe(1)
+    expect(layers(500)).toBe(8)
   })
 
   it('Remap converts ranges, by default -1…1 to 0…1', () => {

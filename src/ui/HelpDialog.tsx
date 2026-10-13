@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useUIStore } from '@/store/uiStore'
+import { useBackToClose } from './useBackToClose'
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 const MOD = isMac ? '⌘' : 'Ctrl'
@@ -16,7 +17,7 @@ const SECTIONS: { title: string; items: Gesture[] }[] = [
   {
     title: 'Build',
     items: [
-      { keys: [MOD, 'K'], or: [['Double-click the canvas']], does: 'Add a node' },
+      { keys: [MOD, 'K'], or: [['Shift', 'A'], ['Double-click the canvas']], does: 'Add a node, where the pointer is' },
       { keys: ['Right-click a node, a wire or the canvas'], does: 'Open its menu: duplicate, copy, delete, fold…' },
       { keys: ['Drop a wire on empty space'], does: 'Add a node that fits, already connected' },
       { keys: ['Drag a wire end'], does: 'Move it to another port, or drop it on empty space to remove it' },
@@ -45,6 +46,7 @@ const SECTIONS: { title: string; items: Gesture[] }[] = [
       { keys: [MOD, 'A'], does: 'Select every node' },
       { keys: [MOD, 'D'], does: 'Duplicate the selection' },
       { keys: ['Delete'], does: 'Remove the selection' },
+      { keys: ['Esc'], does: 'Leave a field, then drop the selection' },
     ],
   },
   {
@@ -53,7 +55,8 @@ const SECTIONS: { title: string; items: Gesture[] }[] = [
       { keys: [MOD, 'Z'], does: 'Undo' },
       { keys: [MOD, 'Shift', 'Z'], does: 'Redo' },
       { keys: ['Scroll'], does: 'Zoom' },
-      { keys: ['Zoom buttons'], does: 'Zoom in, zoom out, or fit the whole graph' },
+      { keys: ['F'], does: 'Fit the whole graph in view' },
+      { keys: [MOD, 'S'], does: 'Save the project to a file' },
       { keys: ['Drag the background'], does: 'Move around' },
       { keys: ['Touch: tap a node first'], does: 'Its fields, buttons and position only react once it is selected, so panning and pinching never change anything by accident' },
       { keys: ['?'], does: 'Show this help' },
@@ -80,6 +83,7 @@ function Keys({ keys }: { keys: string[] }) {
 /** Everything you can do that is not obvious from the interface. */
 export default function HelpDialog() {
   const open = useUIStore((s) => s.helpOpen)
+  useBackToClose(open, () => useUIStore.getState().setHelpOpen(false))
 
   return (
     <Dialog open={open} onOpenChange={(o) => useUIStore.getState().setHelpOpen(o)}>

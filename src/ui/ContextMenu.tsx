@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { BoxSelect, ClipboardPaste, Copy, CopyPlus, Eye, EyeOff, FoldVertical, Plus, RotateCcw, Scissors, Trash2, UnfoldVertical } from 'lucide-react'
-import { getNodeDef, NOTE_TYPE } from '@/core'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +7,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { copyToClipboard, cutToClipboard, deleteSelection, duplicateSelection, pasteFromClipboard, selectAll } from '@/store/fileActions'
+import {
+  copyToClipboard,
+  cutToClipboard,
+  deleteSelection,
+  describeSelection,
+  duplicateSelection,
+  pasteFromClipboard,
+  selectAll,
+  toggleSelectionFold,
+  toggleSelectionPreviews,
+} from '@/store/fileActions'
 import { useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
 
@@ -38,17 +47,8 @@ export function ContextMenu() {
 
   const store = useGraphStore.getState()
   // A right-click on a node selects it first, so "the nodes" are always the selection.
-  const nodes = [...selected].map((id) => graph.nodes[id]).filter((n) => n && n.type !== NOTE_TYPE)
-  const previewable = nodes.filter((n) => {
-    const def = getNodeDef(n.type)
-    return def && def.type !== 'output' && def.preview !== 'none'
-  })
+  const { nodes, previewable, showPreviews, fold, removable } = describeSelection(graph, selected)
   const withValues = nodes.filter((n) => Object.keys(n.values).length > 0)
-  // Show the opposite of what the first node does, applied to all so they end up alike.
-  const showPreviews = !previewable[0]?.showPreview
-  const fold = !nodes[0]?.collapsed
-  // The Output node can be neither deleted nor cut.
-  const removable = [...selected].some((id) => (id in graph.nodes ? graph.nodes[id].type !== 'output' : true))
 
   return (
     <DropdownMenu open onOpenChange={(open) => !open && useUIStore.getState().closeContextMenu()}>
@@ -77,9 +77,7 @@ export function ContextMenu() {
             {previewable.length > 0 && (
               <Item
                 icon={showPreviews ? <Eye /> : <EyeOff />}
-                onSelect={() => {
-                  for (const n of previewable) if ((n.showPreview === true) !== showPreviews) store.togglePreview(n.id)
-                }}
+                onSelect={toggleSelectionPreviews}
               >
                 {showPreviews ? 'Show preview' : 'Hide preview'}
               </Item>
@@ -87,9 +85,7 @@ export function ContextMenu() {
             {nodes.length > 0 && (
               <Item
                 icon={fold ? <FoldVertical /> : <UnfoldVertical />}
-                onSelect={() => {
-                  for (const n of nodes) if ((n.collapsed === true) !== fold) store.toggleCollapsed(n.id)
-                }}
+                onSelect={toggleSelectionFold}
               >
                 {fold ? 'Fold' : 'Unfold'}
               </Item>

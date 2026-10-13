@@ -38,6 +38,28 @@ describe('project files', () => {
   })
 })
 
+describe('projects saved by an older version', () => {
+  const v1 = (nodes: Record<string, unknown>) => JSON.stringify({ format: 'shadeflow', version: 1, graph: { nodes, edges: [] } })
+
+  it('keep what their nodes computed before new inputs existed', () => {
+    const g = parseProject(
+      v1({
+        n: { type: 'noise' },
+        f: { type: 'fractal-noise', values: { gain: [0.4] } },
+        r: { type: 'rotate', values: { angle: [1] } },
+      }),
+    )
+    expect(g.nodes.n.values).toEqual({ scale: [1] })
+    expect(g.nodes.f.values).toEqual({ scale: [1], gain: [0.4] })
+    expect(g.nodes.r.values).toEqual({ center: [0, 0], angle: [1] })
+  })
+
+  it('are left alone once saved again', () => {
+    const g: Graph = { ...newGraph(), nodes: { ...newGraph().nodes, n: { id: 'n', type: 'noise', position: { x: 0, y: 0 }, values: {} } } }
+    expect(parseProject(serializeProject(g)).nodes.n.values).toEqual({})
+  })
+})
+
 describe('sameShader', () => {
   it('ignores positions and note text, but not values, wires or node types', async () => {
     const { sameShader } = await import('./index')

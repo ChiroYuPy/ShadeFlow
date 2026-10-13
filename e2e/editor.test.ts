@@ -23,6 +23,15 @@ const zoomLevel = () =>
   })
 
 describe('startup', () => {
+  it('draws node previews square, like the result', async () => {
+    const box = await app.page.$eval('.react-flow__node canvas', (c) => {
+      const r = c.getBoundingClientRect()
+      return { ratio: r.width / r.height, pixels: (c as HTMLCanvasElement).width / (c as HTMLCanvasElement).height }
+    })
+    expect(box.ratio).toBeCloseTo(1, 1)
+    expect(box.pixels).toBe(1)
+  })
+
   it('shows the default example with live previews', async () => {
     expect(await app.nodeCount()).toBeGreaterThan(5)
     expect(await app.nodeTitles()).toContain('Output')
@@ -79,16 +88,44 @@ describe('replacing the project', () => {
 })
 
 describe('examples', () => {
-  it.each(EXAMPLES.map((e) => [e.name]))('"%s" loads and displays', async (name) => {
+  const openExamples = async () => {
     await app.page.click('button[aria-label="Project menu"]')
     await app.sleep(200)
-    // open the Examples submenu
-    const sub = await app.page.evaluateHandle(() =>
-      [...document.querySelectorAll('[role=menuitem]')].find((e) => e.textContent?.includes('Examples')) ?? null,
-    )
-    await (sub.asElement() as ElementHandle<Element>).click()
-    await app.sleep(300)
-    await app.clickMenuItem(name)
+    await app.clickMenuItem('Examples')
+    await app.page.waitForSelector('[data-examples]')
+  }
+
+  it('shows each example with a live picture of its result', async () => {
+    await openExamples()
+    await app.sleep(600)
+    const cards = await app.page.$$eval('[data-example]', (els) => els.map((e) => e.querySelector('canvas') !== null))
+    expect(cards).toHaveLength(EXAMPLES.length)
+    expect(cards.every(Boolean)).toBe(true)
+    await app.key('Escape')
+    await app.sleep(400)
+    expect(await app.page.$('[data-examples]')).toBeNull()
+  })
+
+  it('keeps the cards whole on a phone: square picture, name and description', async () => {
+    await app.page.setViewport({ width: 390, height: 760, isMobile: true, hasTouch: true })
+    await app.reload()
+    await openExamples()
+    await app.sleep(500)
+    const card = await app.page.$eval('[data-example]', (c) => {
+      const picture = c.querySelector('canvas')!.getBoundingClientRect()
+      const name = c.querySelector('.font-medium')!.getBoundingClientRect()
+      return { ratio: picture.width / picture.height, nameHeight: name.height, nameBelow: name.top >= picture.bottom }
+    })
+    expect(card.ratio).toBeCloseTo(1, 1)
+    expect(card.nameHeight).toBeGreaterThan(10)
+    expect(card.nameBelow).toBe(true)
+    await app.page.setViewport({ width: 1400, height: 800 })
+  })
+
+  it.each(EXAMPLES.map((e) => [e.name, e.id]))('"%s" loads and displays', async (_name, id) => {
+    await openExamples()
+    await app.page.$eval(`[data-example="${id}"]`, (card) => (card as HTMLElement).click())
+    await app.sleep(500)
     await app.page.waitForSelector('[role=dialog]')
     await app.page.evaluate(() => ([...document.querySelectorAll('[role=dialog] button')].find((b) => b.textContent === 'Replace') as HTMLElement | undefined)?.click())
     await app.sleep(1200)
@@ -130,6 +167,169 @@ describe('node palette', () => {
   })
 })
 
+describe('node palette, on a touch screen', () => {
+  it('shows what a node does without adding it', async () => {
+    await app.page.setViewport({ width: 390, height: 800, isMobile: true, hasTouch: true })
+    await app.reload()
+    const before = await app.nodeCount()
+    await app.page.tap('button[aria-label^="Add a node"]')
+    await app.page.waitForSelector('[data-palette]')
+    await app.sleep(400)
+    await app.page.$eval('[data-palette-info][aria-label="About Centered UV"]', (b) => (b as HTMLElement).click())
+    await app.sleep(300)
+    const text = await app.page.$eval('[data-palette]', (p) => p.textContent ?? '')
+    expect(text).toContain('corrected for the aspect ratio so circles stay round') // the whole description
+    expect(text).toContain('Add Centered UV')
+    expect(await app.nodeCount()).toBe(before)
+    await app.page.setViewport({ width: 1400, height: 800 })
+  })
+})
+
+describe('node palette, on a phone', () => {
+  const phone = async () => {
+    await app.page.setViewport({ width: 390, height: 800, isMobile: true, hasTouch: true })
+    await app.reload()
+  }
+  // long enough for the sheet to slide away
+  const settle = () => app.sleep(500)
+  const isOpen = () => app.page.evaluate(() => document.querySelector('[data-palette]') !== null)
+  const openFromToolbar = async () => {
+    await app.page.tap('button[aria-label^="Add a node"]')
+    await app.page.waitForSelector('[data-palette]')
+    await app.sleep(250)
+  }
+  afterEach(() => app.page.setViewport({ width: 1400, height: 800 }))
+
+  it('closes with its button, and with the Back button without leaving the site', async () => {
+    await phone()
+    await openFromToolbar()
+    // browsing first: the keyboard does not pop up over the list
+    expect(await app.page.evaluate(() => document.activeElement?.tagName)).not.toBe('INPUT')
+    await app.page.tap('[data-palette] button[aria-label="Close"]')
+    await settle()
+    expect(await isOpen()).toBe(false)
+
+    await openFromToolbar()
+    const url = app.page.url()
+    await app.page.goBack()
+    await settle()
+    expect(await isOpen()).toBe(false)
+    expect(app.page.url()).toBe(url)
+    expect(await app.nodeCount()).toBeGreaterThan(1)
+  })
+
+  it('adds the tapped node', async () => {
+    await phone()
+    const before = await app.nodeCount()
+    await openFromToolbar()
+    await app.page.evaluate(() => {
+      const item = [...document.querySelectorAll<HTMLElement>('[data-palette-item]')].find((i) => i.textContent?.startsWith('Polygon'))
+      item?.click()
+    })
+    await settle()
+    expect(await isOpen()).toBe(false)
+    expect(await app.nodeCount()).toBe(before + 1)
+    expect(await app.nodeTitles()).toContain('Polygon')
+  })
+})
+
+describe('reloading with an overlay open', () => {
+  it('does not reload the page again when the next overlay closes', async () => {
+    await app.openPalette()
+    await app.reload()
+    await app.page.evaluate(() => ((window as unknown as { stillHere: boolean }).stillHere = true))
+    await app.addNode('Sin')
+    await app.sleep(600)
+    // the same page is still running: nothing navigated away behind the user's back
+    expect(await app.page.evaluate(() => (window as unknown as { stillHere?: boolean }).stillHere)).toBe(true)
+    expect(await app.nodeTitles()).toContain('Sin')
+  })
+})
+
+describe('keyboard', () => {
+  it('copies, pastes and cuts the selection', async () => {
+    const before = await app.nodeCount()
+    await app.clickNode('Fract')
+    await app.key('c', ['Control'])
+    await app.key('v', ['Control'])
+    await app.sleep(300)
+    expect(await app.nodeCount()).toBe(before + 1)
+    // the pasted copy is selected: cutting removes it, pasting brings it back
+    await app.key('x', ['Control'])
+    expect(await app.nodeCount()).toBe(before)
+    await app.key('v', ['Control'])
+    await app.sleep(300)
+    expect(await app.nodeCount()).toBe(before + 1)
+    expect((await app.nodeTitles()).filter((t) => t === 'Fract')).toHaveLength(2)
+  })
+
+  it('moves the highlight with the arrows and adds with Enter', async () => {
+    await app.openPalette()
+    await app.page.keyboard.type('co')
+    await app.sleep(200)
+    const items = await app.paletteItems()
+    await app.key('ArrowDown')
+    const highlighted = await app.page.$eval('[data-palette-item][aria-selected=true] .font-medium', (e) => e.textContent)
+    expect(highlighted).toBe(items[1])
+    await app.key('Enter')
+    await app.sleep(300)
+    expect(await app.nodeTitles()).toContain(items[1])
+  })
+
+  it('drops the selection with Escape', async () => {
+    const selected = () => app.page.evaluate(() => document.querySelectorAll('.react-flow__node.selected').length)
+    await app.clickNode('Fract')
+    expect(await selected()).toBe(1)
+    await app.key('Escape')
+    expect(await selected()).toBe(0)
+  })
+})
+
+describe('toolbar', () => {
+  it('shows and hides the result', async () => {
+    const shown = () => app.page.evaluate(() => document.querySelector('[data-result]') !== null)
+    expect(await shown()).toBe(true)
+    await app.page.click('button[aria-label="Result preview"]')
+    await app.sleep(400) // it slides away first
+    expect(await shown()).toBe(false)
+    await app.page.click('button[aria-label="Result preview"]')
+    await app.sleep(400)
+    expect(await shown()).toBe(true)
+  })
+
+  it('resizes the result and shows it fullscreen', async () => {
+    const width = () => app.page.$eval('[data-result]', (e) => e.getBoundingClientRect().width)
+    const small = await width()
+    await app.page.click('[data-result] button[aria-label="Larger"]')
+    await app.sleep(400)
+    expect(await width()).toBeGreaterThan(small * 1.4)
+    await app.page.click('[data-result] button[aria-label="Fullscreen"]')
+    await app.sleep(400)
+    expect(await app.page.$('button[aria-label^="Close fullscreen"]')).not.toBeNull()
+    await app.key('Escape')
+    await app.sleep(400)
+    expect(await app.page.$('button[aria-label^="Close fullscreen"]')).toBeNull()
+  })
+})
+
+describe('selection bar', () => {
+  const bar = () => app.page.$('[role=toolbar][aria-label="Selection"]')
+
+  it('appears with the selection and acts on it', async () => {
+    expect(await bar()).toBeNull()
+    const before = await app.nodeCount()
+    await app.clickNode('Fract')
+    expect(await app.page.$eval('[role=toolbar][aria-label="Selection"]', (b) => b.textContent)).toContain('1 selected')
+    await app.page.click('button[aria-label^="Duplicate selection"]')
+    await app.sleep(250)
+    expect(await app.nodeCount()).toBe(before + 1)
+    await app.page.click('button[aria-label^="Delete selection"]')
+    await app.sleep(450) // the bar slides away
+    expect(await app.nodeCount()).toBe(before)
+    expect(await bar()).toBeNull()
+  })
+})
+
 describe('right-click menus', () => {
   it('duplicates a node', async () => {
     const before = await app.nodeCount()
@@ -154,11 +354,18 @@ describe('right-click menus', () => {
   })
 
   it('opens the palette from the canvas', async () => {
-    await app.page.mouse.click(700, 700, { button: 'right' })
+    // somewhere on the empty canvas, wherever the example leaves room
+    const at = await app.page.evaluate(() => {
+      for (let y = 780; y > 100; y -= 20)
+        for (let x = 100; x < 1300; x += 20)
+          if (document.elementFromPoint(x, y)?.classList.contains('react-flow__pane')) return { x, y }
+      return null
+    })
+    await app.page.mouse.click(at!.x, at!.y, { button: 'right' })
     await app.page.waitForSelector('[role=menu]')
     expect(await app.menuItems()).toEqual(expect.arrayContaining([expect.stringContaining('Add a node here')]))
     await app.clickMenuItem('Add a node here')
-    await app.page.waitForSelector('[cmdk-root]')
+    await app.page.waitForSelector('[data-palette]')
   })
 
   it('acts on a whole selection', async () => {
@@ -221,7 +428,7 @@ describe('view', () => {
     await app.page.click('button[aria-label="Zoom out"]')
     await app.sleep(500)
     expect(await zoomLevel()).toBeLessThan(start)
-    await app.page.click('button[aria-label="Fit graph in view"]')
+    await app.page.click('button[aria-label^="Fit graph in view"]')
     await app.sleep(700)
     expect(await zoomLevel()).toBeGreaterThan(0.4)
   })

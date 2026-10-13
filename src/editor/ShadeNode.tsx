@@ -4,7 +4,6 @@ import { ChevronDown, Eye, EyeOff } from 'lucide-react'
 import { coerceConstant, concreteType, getNodeDef, type ValueType } from '@/core'
 import { cn } from '@/lib/utils'
 import { editValue, useGraphStore } from '@/store/graphStore'
-import { useUIStore } from '@/store/uiStore'
 import { NodePreview } from './NodePreview'
 import { CATEGORY_TEXT, nodeIcon } from './nodeLook'
 import { PortValue } from './ValueFields'
@@ -41,7 +40,6 @@ const handleStyle = (type: ValueType, side: 'left' | 'right') => ({
 })
 
 function ShadeNodeImpl({ id, data, selected }: NodeProps<ShadeFlowNode>) {
-  const previewsEnabled = useUIStore((s) => s.nodePreviews)
   const def = getNodeDef(data.nodeType)
   if (!def) {
     return <div className="rounded-lg border border-destructive bg-node px-3 py-2 text-sm">Unknown node</div>
@@ -50,7 +48,7 @@ function ShadeNodeImpl({ id, data, selected }: NodeProps<ShadeFlowNode>) {
   // The Output node is a sink: its single "output" only feeds the compiler.
   const outputs = def.type === 'output' ? [] : def.outputs
   const canPreview = def.type !== 'output' && def.preview !== 'none'
-  const showPreview = previewsEnabled && canPreview && data.showPreview && !data.collapsed
+  const showPreview = canPreview && data.showPreview && !data.collapsed
   const store = useGraphStore.getState
 
   return (
@@ -67,7 +65,7 @@ function ShadeNodeImpl({ id, data, selected }: NodeProps<ShadeFlowNode>) {
       <div className="flex h-9 items-center gap-2 rounded-t-xl bg-node-header pr-2 pl-2 font-medium">
         {createElement(nodeIcon(def.type), { className: cn('size-5 shrink-0', CATEGORY_TEXT[def.category]) })}
         <span className="min-w-0 flex-1 truncate">{def.label}</span>
-        {previewsEnabled && canPreview && (
+        {canPreview && (
           <button
             type="button"
             aria-label={data.showPreview ? 'Hide preview' : 'Show preview'}
@@ -135,8 +133,9 @@ function ShadeNodeImpl({ id, data, selected }: NodeProps<ShadeFlowNode>) {
           // Folded nodes keep only the plugs that are in use.
           if (data.collapsed && !wired) return null
 
-          const editable = !connectable || !wired
-          const value = coerceConstant(data.values[port.name] ?? port.default, type)
+          // Unwired, a position is the pixel's UV: nothing to edit, the row just says so.
+          const usesUV = port.default === 'uv' && !wired
+          const editable = port.default !== 'uv' && (!connectable || !wired)
 
           // One row per input: its label, then (when nothing is wired in) its value.
           return (
@@ -145,11 +144,17 @@ function ShadeNodeImpl({ id, data, selected }: NodeProps<ShadeFlowNode>) {
                 <Handle id={port.name} type="target" position={Position.Left} style={handleStyle(type, 'left')} />
               )}
               <span className="shrink-0 text-muted-foreground">{port.label}</span>
-              {editable && (
+              {usesUV && (
+                <span className="ml-auto text-xs text-muted-foreground" title="Nothing is wired in: the pixel's UV is used">
+                  UV
+                </span>
+              )}
+              {editable && port.default !== 'uv' && (
                 <PortValue
                   type={type}
                   widget={port.widget}
-                  value={value}
+                  whole={port.whole}
+                  value={coerceConstant(data.values[port.name] ?? port.default, type)}
                   onChange={(v) => editValue(id, port.name, v)}
                 />
               )}

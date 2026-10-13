@@ -3,9 +3,9 @@
 A node-based shader editor that runs in your browser. Connect nodes to build a shader, see
 every intermediate result live, and read the code it generates — to learn how shaders work.
 
-## 👉 [**Open ShadeFlow — chiroyupy.github.io/ShadeFlow**](https://chiroyupy.github.io/ShadeFlow/)
+### [▶ Launch the editor](https://chiroyupy.github.io/ShadeFlow/)
 
-Nothing to install, no account: that link is the app itself.
+No install, no account: it is the app itself.
 
 - **Node graph** with a live preview on any node and a description for each one
 - **Generated code** in GLSL, WGSL and HLSL

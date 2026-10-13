@@ -13,8 +13,17 @@ function NoteNodeImpl({ id, data, selected }: NodeProps<NoteFlowNode>) {
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    el.style.height = '0'
-    el.style.height = `${el.scrollHeight}px`
+    const fit = () => {
+      el.style.height = '0'
+      el.style.height = `${el.scrollHeight}px`
+    }
+    fit()
+    // The font may arrive after the first layout and wrap the text differently.
+    let mounted = true
+    void document.fonts.ready.then(() => mounted && fit())
+    return () => {
+      mounted = false
+    }
   }, [data.text])
 
   return (

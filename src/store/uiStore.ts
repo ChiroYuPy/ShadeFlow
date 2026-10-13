@@ -38,9 +38,12 @@ interface UIState {
   tool: 'pan' | 'select'
   setTool: (tool: 'pan' | 'select') => void
 
-  /** Show a live preview inside each node. */
-  nodePreviews: boolean
-  toggleNodePreviews: () => void
+  /** Show the result of the shader, in the corner. */
+  resultOpen: boolean
+  toggleResult: () => void
+  /** The result panel has two sizes. */
+  resultLarge: boolean
+  toggleResultLarge: () => void
 
   codeOpen: boolean
   toggleCode: () => void
@@ -53,6 +56,10 @@ interface UIState {
 
   helpOpen: boolean
   setHelpOpen: (open: boolean) => void
+
+  /** The overlay to pick an example from. */
+  examplesOpen: boolean
+  setExamplesOpen: (open: boolean) => void
 
   /** A short message shown to the user (import errors…). */
   notice: string | null
@@ -93,8 +100,10 @@ export const useUIStore = create<UIState>()((set) => ({
   tool: 'pan',
   setTool: (tool) => set({ tool }),
 
-  nodePreviews: true,
-  toggleNodePreviews: () => set((s) => ({ nodePreviews: !s.nodePreviews })),
+  resultOpen: true,
+  toggleResult: () => set((s) => ({ resultOpen: !s.resultOpen })),
+  resultLarge: false,
+  toggleResultLarge: () => set((s) => ({ resultLarge: !s.resultLarge })),
 
   codeOpen: false,
   toggleCode: () => set((s) => ({ codeOpen: !s.codeOpen })),
@@ -106,6 +115,9 @@ export const useUIStore = create<UIState>()((set) => ({
 
   helpOpen: false,
   setHelpOpen: (open) => set({ helpOpen: open }),
+
+  examplesOpen: false,
+  setExamplesOpen: (open) => set({ examplesOpen: open }),
 
   notice: null,
   setNotice: (message) => set({ notice: message }),

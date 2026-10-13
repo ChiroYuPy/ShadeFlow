@@ -2,7 +2,23 @@ import { newGraph, NOTE_TYPE, type Graph, type GraphEdge, type GraphNode } from 
 import { getNodeDef } from './nodes/registry'
 
 const FORMAT = 'shadeflow'
-const VERSION = 1
+const VERSION = 2
+
+/**
+ * Inputs added in version 2 whose default is not what version 1 nodes computed. Projects
+ * saved before get the old behavior written as explicit values, so they look the same.
+ */
+const V1_VALUES: Record<string, Record<string, number[]>> = {
+  noise: { scale: [1] },
+  'fractal-noise': { scale: [1] },
+  rotate: { center: [0, 0] },
+}
+
+function migrateFromV1(nodes: Record<string, GraphNode>): Record<string, GraphNode> {
+  return Object.fromEntries(
+    Object.entries(nodes).map(([id, node]) => [id, { ...node, values: { ...V1_VALUES[node.type], ...node.values } }]),
+  )
+}
 
 export function serializeProject(graph: Graph): string {
   return JSON.stringify({ format: FORMAT, version: VERSION, graph }, null, 2)
@@ -29,7 +45,8 @@ export function parseProject(json: string): Graph {
   if (typeof data.version !== 'number' || data.version > VERSION) {
     throw new Error('This project was made with a newer version of ShadeFlow')
   }
-  return sanitizeGraph(data.graph)
+  const graph = sanitizeGraph(data.graph)
+  return data.version < 2 ? { ...graph, nodes: migrateFromV1(graph.nodes) } : graph
 }
 
 /** Keep only well-formed nodes of known types. */

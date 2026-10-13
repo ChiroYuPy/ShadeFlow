@@ -43,8 +43,9 @@
 
   /* Node categories: a thin tint on the node header */
   --color-cat-input: var(--cat-input);
-  --color-cat-constant: var(--cat-constant);
   --color-cat-vector: var(--cat-vector);
+  --color-cat-uv: var(--cat-uv);
+  --color-cat-procedural: var(--cat-procedural);
   --color-cat-color: var(--cat-color);
   --color-cat-math: var(--cat-math);
   --color-cat-output: var(--cat-output);
@@ -96,8 +97,9 @@
   --node-border: oklch(1 0 0 / 16%);
 
   --cat-input: oklch(0.68 0.14 25);
-  --cat-constant: oklch(0.65 0.05 250);
   --cat-vector: oklch(0.66 0.13 290);
+  --cat-uv: oklch(0.72 0.11 215);
+  --cat-procedural: oklch(0.72 0.14 335);
   --cat-color: oklch(0.8 0.13 90);
   --cat-math: oklch(0.7 0.12 165);
   --cat-output: oklch(0.68 0.17 10);
@@ -163,4 +165,13 @@
   content: '';
   position: absolute;
   inset: -6px;
+}
+
+/* Animations are short slides and fades; people who asked their system for less motion get none. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+  }
 }

@@ -23,6 +23,14 @@ float sf_noise(vec2 p) {
   );
 }`
 
+// Same hash, fed with the bits of the seed so that any two different seeds differ.
+const RANDOM = `float sf_random(vec2 seed) {
+  uvec2 q = floatBitsToUint(seed) * uvec2(1597334673u, 3812015801u);
+  uint n = q.x ^ q.y;
+  n = (n ^ (n >> 16)) * 2246822519u;
+  return float(n >> 8) / 16777216.0;
+}`
+
 const glsl: Target = {
   typeName: (t) => t,
   declare: (type, name, expr) => `  ${type} ${name} = ${expr};`,
@@ -33,6 +41,7 @@ const glsl: Target = {
     div: { infix: '/' },
     sin: { call: 'sin' },
     cos: { call: 'cos' },
+    atan2: { call: 'atan' },
     abs: { call: 'abs' },
     fract: { call: 'fract' },
     floor: { call: 'floor' },
@@ -46,21 +55,24 @@ const glsl: Target = {
     step: { call: 'step' },
     length: { call: 'length' },
     noise: { call: 'sf_noise' },
+    random: { call: 'sf_random' },
   },
-  input: (name) => ({ uv: 'uv', time: 'u_time', resolution: 'u_resolution' })[name],
+  input: (name) => ({ uv: 'uv', time: 'u_time', resolution: 'u_resolution', mouse: 'u_mouse' })[name],
   program: ({ usedInputs, usedOps, body, result, mark }) =>
     [
       '#version 300 es',
       'precision highp float;',
       // Integers default to mediump (often 16 bits on phones): the hash needs all 32.
-      ...(usedOps.has('noise') ? ['precision highp int;'] : []),
+      ...(usedOps.has('noise') || usedOps.has('random') ? ['precision highp int;'] : []),
       '',
       mark('uniform vec2 u_resolution;', 'resolution'),
       ...(usedInputs.has('time') ? [mark('uniform float u_time;', 'time')] : []),
+      ...(usedInputs.has('mouse') ? [mark('uniform vec2 u_mouse;', 'mouse')] : []),
       '',
       'out vec4 fragColor;',
       '',
       ...(usedOps.has('noise') ? [NOISE, ''] : []),
+      ...(usedOps.has('random') ? [RANDOM, ''] : []),
       'void main() {',
       mark('  vec2 uv = gl_FragCoord.xy / u_resolution;', 'uv'),
       ...body,

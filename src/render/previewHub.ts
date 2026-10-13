@@ -15,6 +15,7 @@ import {
 import { useGraphStore } from '@/store/graphStore'
 import { compileShader, linkProgram, VERTEX_SOURCE } from './gl'
 import { getMainSize } from './mainSize'
+import { getMouse } from './mouse'
 import { describeValue, previewKindOf, usesInput, type PreviewKind } from './previewValue'
 
 /**
@@ -29,8 +30,8 @@ import { describeValue, previewKindOf, usesInput, type PreviewKind } from './pre
  *   on the CPU (`evaluate`) — no GPU involved.
  */
 
-export const PREVIEW_WIDTH = 384
-export const PREVIEW_HEIGHT = 128
+/** Previews are square, like the result: a circle looks like a circle. */
+export const PREVIEW_SIZE = 256
 
 /** What the compiler found out about one previewed output. */
 interface Analysis {
@@ -40,7 +41,7 @@ interface Analysis {
   /** For `value`. */
   ir: IRModule | null
   type: ValueType
-  /** Depends on time: must be redrawn every frame. */
+  /** Depends on time or on the pointer: must be redrawn every frame. */
   animated: boolean
 }
 
@@ -64,6 +65,7 @@ interface Program {
   program: WebGLProgram
   resolution: WebGLUniformLocation | null
   time: WebGLUniformLocation | null
+  mouse: WebGLUniformLocation | null
 }
 
 class PreviewHub {
@@ -121,6 +123,24 @@ class PreviewHub {
     return id
   }
 
+  /**
+   * Id under which the result of a whole graph (an example…) can be previewed, outside the project.
+   * `key` names the graph: the same key always shows the graph first given for it.
+   */
+  resultId(key: string, graph: Graph): string {
+    const id = `result:${key}`
+    if (!this.sandboxes.has(id)) {
+      // The previewed node must be called `id`: the copy's Output node takes that name.
+      const output = Object.values(graph.nodes).find((n) => n.type === 'output')
+      if (!output) return id
+      const nodes = { ...graph.nodes, [id]: { ...output, id } }
+      delete nodes[output.id]
+      const edges = graph.edges.map((e) => (e.to.nodeId === output.id ? { ...e, to: { ...e.to, nodeId: id } } : e))
+      this.sandboxes.set(id, { nodes, edges })
+    }
+    return id
+  }
+
   /** The graph a node belongs to: the project, or its sandbox. */
   private graphOf(nodeId: string): Graph {
     return this.sandboxes.get(nodeId) ?? useGraphStore.getState().graph
@@ -162,7 +182,7 @@ class PreviewHub {
 
     const genTypes = this.sandboxes.has(nodeId) ? resolveGenTypes(graph) : (this.genTypes ??= resolveGenTypes(graph))
     const type = concreteType(output.type, genTypes[nodeId] ?? 'float')
-    const animated = usesInput(result.ir, 'time')
+    const animated = usesInput(result.ir, 'time') || usesInput(result.ir, 'mouse')
     if (previewKindOf(result.ir) === 'value') {
       try {
         evaluate(result.ir) // make sure the CPU can compute it
@@ -242,7 +262,7 @@ class PreviewHub {
       if (analysis.kind !== 'value' || !analysis.ir) continue
       if (!analysis.animated && entry.drawn === analysis) continue
 
-      const rgb = evaluate(analysis.ir, { time, resolution: getMainSize() })
+      const rgb = evaluate(analysis.ir, { time, resolution: getMainSize(), mouse: getMouse() })
       const { text, swatch } = describeValue(analysis.type, rgb)
       entry.drawn = analysis
       if (text !== entry.text) {
@@ -259,7 +279,7 @@ class PreviewHub {
       if (!entry.visible) continue
       const analysis = this.analysisOf(id)
       const source = analysis.kind === 'image' ? analysis.glsl : null
-      const animated = source !== null && source.includes('u_time')
+      const animated = source !== null && (source.includes('u_time') || source.includes('u_mouse'))
       if (!animated && entry.drawn === source) continue
       this.draw(entry, source, time)
       entry.drawn = source
@@ -271,12 +291,13 @@ class PreviewHub {
     const program = source === null ? null : this.programFor(source)
     const gl = this.gl
     if (!program || !gl) {
-      entry.ctx.clearRect(0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT)
+      entry.ctx.clearRect(0, 0, PREVIEW_SIZE, PREVIEW_SIZE)
       return
     }
     gl.useProgram(program.program)
-    gl.uniform2f(program.resolution, PREVIEW_WIDTH, PREVIEW_HEIGHT)
+    gl.uniform2f(program.resolution, PREVIEW_SIZE, PREVIEW_SIZE)
     gl.uniform1f(program.time, time)
+    gl.uniform2f(program.mouse, ...getMouse())
     gl.drawArrays(gl.TRIANGLES, 0, 3)
     entry.ctx.drawImage(gl.canvas as HTMLCanvasElement, 0, 0)
   }
@@ -290,11 +311,11 @@ class PreviewHub {
       this.gl = null
     }
     const canvas = document.createElement('canvas')
-    canvas.width = PREVIEW_WIDTH
-    canvas.height = PREVIEW_HEIGHT
+    canvas.width = PREVIEW_SIZE
+    canvas.height = PREVIEW_SIZE
     const gl = canvas.getContext('webgl2')
     if (!gl) return null
-    gl.viewport(0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT)
+    gl.viewport(0, 0, PREVIEW_SIZE, PREVIEW_SIZE)
     this.vertex = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SOURCE).shader
     this.gl = gl
     return gl
@@ -311,6 +332,7 @@ class PreviewHub {
           program,
           resolution: gl.getUniformLocation(program, 'u_resolution'),
           time: gl.getUniformLocation(program, 'u_time'),
+          mouse: gl.getUniformLocation(program, 'u_mouse'),
         }
       : null
     this.programs.set(source, entry)

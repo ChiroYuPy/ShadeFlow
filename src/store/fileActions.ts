@@ -10,7 +10,8 @@ import {
   type Graph,
   type GraphFragment,
 } from '@/core'
-import { useGraphStore } from './graphStore'
+import { getNodeDef, NOTE_TYPE, type GraphNode } from '@/core'
+import { beginGesture, endGesture, useGraphStore } from './graphStore'
 import { useUIStore } from './uiStore'
 
 /**
@@ -74,10 +75,18 @@ function selectedFragment() {
   return extractFragment(useGraphStore.getState().graph, useUIStore.getState().selected)
 }
 
+/**
+ * What was last copied here. The system clipboard is not always reachable (the browser may
+ * block it, or hold something unreadable): copy and paste inside the app work regardless.
+ */
+let copied: string | null = null
+
 /** Text to put on the clipboard for the current selection, or `null` if nothing can be copied. */
 export function copySelection(): string | null {
   const fragment = selectedFragment()
-  return fragment && serializeFragment(fragment)
+  if (!fragment) return null
+  copied = serializeFragment(fragment)
+  return copied
 }
 
 /** Copy, then delete (the Output node stays). */
@@ -102,6 +111,11 @@ export function pasteText(text: string): boolean {
   return true
 }
 
+/** Paste what was last copied in this tab. Returns whether there was something. */
+export function pasteCopied(): boolean {
+  return copied !== null && pasteText(copied)
+}
+
 /** Copy and paste the selection in one go, slightly offset. */
 export function duplicateSelection() {
   const fragment = selectedFragment()
@@ -115,17 +129,71 @@ async function writeClipboard(text: string | null) {
   try {
     await navigator.clipboard.writeText(text)
   } catch {
-    useUIStore.getState().setNotice('The browser blocked clipboard access')
+    // Blocked (or no https): the copy still lives in this tab, see `copied`.
   }
 }
 
 export const copyToClipboard = () => writeClipboard(copySelection())
 export const cutToClipboard = () => writeClipboard(cutSelection())
 
+/** Paste from the system clipboard, falling back on what was copied in this tab. */
 export async function pasteFromClipboard() {
+  let text = ''
   try {
-    if (!pasteText(await navigator.clipboard.readText())) useUIStore.getState().setNotice('Nothing to paste')
+    text = await navigator.clipboard.readText()
   } catch {
-    useUIStore.getState().setNotice('The browser blocked clipboard access')
+    // Blocked or refused: use the copy kept in this tab.
   }
+  if (!pasteText(text) && !pasteCopied()) useUIStore.getState().setNotice('Nothing to paste')
+}
+
+// ── Acting on the selected nodes ────────────────────────────────────────
+
+/** What the selection holds, to know which actions make sense for it. */
+export function describeSelection(graph: Graph, selected: ReadonlySet<string>) {
+  const all = [...selected].map((id) => graph.nodes[id]).filter((n): n is GraphNode => !!n)
+  const nodes = all.filter((n) => n.type !== NOTE_TYPE)
+  const previewable = nodes.filter((n) => {
+    const def = getNodeDef(n.type)
+    return def && def.type !== 'output' && def.preview !== 'none'
+  })
+  const wires = graph.edges.filter((e) => selected.has(e.id)).length
+  return {
+    /** Shader nodes (no notes). */
+    nodes,
+    previewable,
+    /** Everything selected that still exists. */
+    count: all.length + wires,
+    copyable: all.some((n) => n.type !== 'output'),
+    /** The Output node can be neither deleted nor cut. */
+    removable: wires > 0 || all.some((n) => n.type !== 'output'),
+    // Toggles show the opposite of what the first node does, applied to all so they end up alike.
+    showPreviews: !previewable[0]?.showPreview,
+    fold: !nodes[0]?.collapsed,
+  }
+}
+
+const currentSelection = () => describeSelection(useGraphStore.getState().graph, useUIStore.getState().selected)
+
+/** Several nodes change at once: one undo step. */
+function asOneStep(run: () => void) {
+  beginGesture()
+  run()
+  endGesture()
+}
+
+export function toggleSelectionPreviews() {
+  const { previewable, showPreviews } = currentSelection()
+  const store = useGraphStore.getState()
+  asOneStep(() => {
+    for (const n of previewable) if ((n.showPreview === true) !== showPreviews) store.togglePreview(n.id)
+  })
+}
+
+export function toggleSelectionFold() {
+  const { nodes, fold } = currentSelection()
+  const store = useGraphStore.getState()
+  asOneStep(() => {
+    for (const n of nodes) if ((n.collapsed === true) !== fold) store.toggleCollapsed(n.id)
+  })
 }

@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  compileGraph,
-  compileToGLSL,
-} from './index'
+import { compileGraph, compileToGLSL, generateGLSL, generateHLSL, generateWGSL } from './index'
 import { build, glsl, mainBody } from './testUtils'
 
 describe('compileToGLSL', () => {
@@ -97,6 +94,29 @@ describe('compileToGLSL', () => {
     const code = glsl(g.graph)
     expect(code).toContain('uv.y')
     expect(code).not.toContain('uv.x')
+  })
+
+  it('declares the mouse and the random helper only when they are used', () => {
+    const g = build()
+    const out = g.node('output')
+    const plain = compileGraph(g.graph)
+    if (!plain.ok) throw new Error('compile failed')
+    for (const code of [generateGLSL(plain.ir), generateWGSL(plain.ir), generateHLSL(plain.ir)]) {
+      expect(code).not.toContain('mouse')
+      expect(code).not.toContain('sf_random')
+    }
+    const mouse = g.node('mouse')
+    const random = g.node('random')
+    g.wire(mouse, 'position', random, 'seed')
+    g.wire(random, 'result', out, 'color')
+    const used = compileGraph(g.graph)
+    if (!used.ok) throw new Error('compile failed')
+    expect(generateGLSL(used.ir)).toContain('uniform vec2 u_mouse;')
+    expect(generateGLSL(used.ir)).toContain('precision highp int;')
+    expect(generateGLSL(used.ir)).toContain('sf_random(u_mouse)')
+    expect(generateWGSL(used.ir)).toContain('mouse: vec2<f32>,')
+    expect(generateWGSL(used.ir)).toContain('sf_random(uniforms.mouse)')
+    expect(generateHLSL(used.ir)).toContain('float2 mouse;')
   })
 
   it('only emits the noise helper when noise is used', () => {

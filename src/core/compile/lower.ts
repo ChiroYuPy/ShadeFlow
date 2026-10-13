@@ -148,7 +148,10 @@ function lower(graph: Graph, options: CompileOptions, diagnostics: Diagnostic[])
       const target = port.type === 'gen' ? genType : port.type
       const id = wired[port.name]
       if (id === undefined) {
-        inputs[port.name] = b.constant(target, coerceConstant(node.values[port.name] ?? port.default, target))
+        inputs[port.name] =
+          port.default === 'uv'
+            ? b.convert(b.input('uv'), target)
+            : b.constant(target, coerceConstant(node.values[port.name] ?? port.default, target))
       } else if (canConvert(b.typeOf(id), target)) {
         inputs[port.name] = b.convert(id, target)
       } else {

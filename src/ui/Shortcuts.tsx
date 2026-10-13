@@ -1,0 +1,153 @@
+import { useEffect } from 'react'
+import { useReactFlow } from '@xyflow/react'
+import {
+  copySelection,
+  copyToClipboard,
+  cutSelection,
+  cutToClipboard,
+  duplicateSelection,
+  pasteCopied,
+  pasteText,
+  saveProjectFile,
+  selectAll,
+} from '@/store/fileActions'
+import { redo, undo } from '@/store/graphStore'
+import { useUIStore } from '@/store/uiStore'
+import { FIT_VIEW } from './view'
+
+function isTyping(target: EventTarget | null) {
+  return target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+}
+
+/** Number fields have no text history worth keeping: Ctrl+Z there undoes the graph. */
+const isNumberField = (target: EventTarget | null) => target instanceof HTMLElement && 'numberField' in target.dataset
+
+/** A dialog or a menu is open: keys belong to it, not to the graph. */
+const inOverlay = (target: EventTarget | null) =>
+  target instanceof HTMLElement && target.closest('[role=dialog], [role=menu]') !== null
+
+/** The user has selected text meant to be read and copied (generated code, help): leave that copy alone. */
+function copyingText() {
+  const selection = window.getSelection()
+  if (!selection || selection.isCollapsed) return false
+  const node = selection.anchorNode
+  const element = node instanceof Element ? node : node?.parentElement
+  return !!element?.closest('pre, [role=dialog]')
+}
+
+/** How long a paste event may take to follow Ctrl+V before the in-app copy is pasted instead. */
+const PASTE_EVENT_MS = 150
+
+/** Keyboard shortcuts of the editor. Renders nothing. */
+export function Shortcuts() {
+  const { fitView } = useReactFlow()
+
+  useEffect(() => {
+    let pasteFallback: ReturnType<typeof setTimeout> | undefined
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const ui = useUIStore.getState()
+      const typing = isTyping(e.target)
+      const mod = e.ctrlKey || e.metaKey
+      const key = e.key.toLowerCase()
+
+      if (e.key === 'Escape') {
+        if (ui.previewFullscreen) ui.setPreviewFullscreen(false)
+        // Leave the field being edited first, then drop the selection.
+        else if (typing && !inOverlay(e.target)) (e.target as HTMLElement).blur()
+        else if (!inOverlay(e.target)) ui.setSelection([])
+        return
+      }
+      if (inOverlay(e.target)) return
+
+      if (!mod && !e.altKey && !typing) {
+        if (key === 'a' && e.shiftKey) {
+          e.preventDefault()
+          ui.openPalette()
+        } else if (e.key === 'v') ui.setTool('select')
+        else if (e.key === 'h') ui.setTool('pan')
+        else if (e.key === 'f') void fitView(FIT_VIEW)
+        else if (e.key === '?') ui.setHelpOpen(true)
+        return
+      }
+      if (!mod) return
+
+      // Leaving the field drops its typed draft, so it shows the restored value after an undo.
+      if (isNumberField(e.target) && (key === 'z' || key === 'y')) (e.target as HTMLElement).blur()
+      if (key === 'k') {
+        e.preventDefault()
+        ui.openPalette()
+      } else if (key === 's') {
+        e.preventDefault() // the browser would save the page
+        saveProjectFile()
+      } else if (typing && !isNumberField(e.target)) {
+        return // text fields keep their own select all, clipboard and undo
+      } else if (key === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) redo()
+        else undo()
+      } else if (key === 'y') {
+        e.preventDefault()
+        redo()
+      } else if (typing) {
+        return // a number field keeps its own select all and clipboard
+      } else if (key === 'a') {
+        e.preventDefault()
+        selectAll()
+      } else if (key === 'd') {
+        e.preventDefault() // the browser would bookmark the page
+        duplicateSelection()
+      } else if (key === 'c' && !e.shiftKey) {
+        // Done here rather than in the `copy` event: browsers do not all send it when no text is selected.
+        if (copyingText()) return
+        e.preventDefault()
+        void copyToClipboard()
+      } else if (key === 'x') {
+        e.preventDefault()
+        void cutToClipboard()
+      } else if (key === 'v' && !e.shiftKey) {
+        // The `paste` event brings the system clipboard without asking for permission.
+        // If it never comes, paste what was copied in this tab.
+        clearTimeout(pasteFallback)
+        pasteFallback = setTimeout(pasteCopied, PASTE_EVENT_MS)
+      }
+    }
+
+    // Copy and cut from the browser's own menu; paste from anywhere.
+    const onCopy = (e: ClipboardEvent) => {
+      if (isTyping(e.target) || copyingText()) return
+      const text = copySelection()
+      if (text === null) return
+      e.clipboardData?.setData('text/plain', text)
+      e.preventDefault()
+    }
+    const onCut = (e: ClipboardEvent) => {
+      if (isTyping(e.target)) return
+      const text = cutSelection()
+      if (text === null) return
+      e.clipboardData?.setData('text/plain', text)
+      e.preventDefault()
+    }
+    const onPaste = (e: ClipboardEvent) => {
+      if (isTyping(e.target) || inOverlay(e.target)) return
+      clearTimeout(pasteFallback)
+      const text = e.clipboardData?.getData('text/plain')
+      // Something else on the clipboard (or nothing readable): what was copied here still pastes.
+      if ((text && pasteText(text)) || pasteCopied()) e.preventDefault()
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    document.addEventListener('copy', onCopy)
+    document.addEventListener('cut', onCut)
+    document.addEventListener('paste', onPaste)
+    return () => {
+      clearTimeout(pasteFallback)
+      window.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('copy', onCopy)
+      document.removeEventListener('cut', onCut)
+      document.removeEventListener('paste', onPaste)
+    }
+  }, [fitView])
+
+  return null
+}

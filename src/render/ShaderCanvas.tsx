@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type PointerEvent } from 'react'
 import { cn } from '@/lib/utils'
+import { setMouse } from './mouse'
 import { ShaderRenderer, type ShaderStatus } from './ShaderRenderer'
 
 interface ShaderCanvasProps {
@@ -35,5 +36,20 @@ export function ShaderCanvas({ code, onStatus, className }: ShaderCanvasProps) {
     if (status) onStatusRef.current?.(status)
   }, [code])
 
-  return <canvas ref={canvasRef} className={cn('block h-full w-full', className)} />
+  // The Mouse node reads the pointer over the result (also while a finger drags on it).
+  const trackPointer = (e: PointerEvent<HTMLCanvasElement>) => {
+    const box = e.currentTarget.getBoundingClientRect()
+    if (box.width > 0 && box.height > 0) {
+      setMouse((e.clientX - box.left) / box.width, 1 - (e.clientY - box.top) / box.height)
+    }
+  }
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className={cn('block h-full w-full', className)}
+      onPointerMove={trackPointer}
+      onPointerDown={trackPointer}
+    />
+  )
 }

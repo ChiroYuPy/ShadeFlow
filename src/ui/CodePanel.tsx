@@ -58,7 +58,7 @@ export default function CodePanel({ ir }: { ir: IRModule | null }) {
   }
 
   return (
-    <div className="absolute inset-x-4 bottom-20 flex h-[45%] flex-col overflow-hidden rounded-xl border bg-card/90 shadow-lg backdrop-blur sm:inset-x-auto sm:top-[4.25rem] sm:left-4 sm:h-auto sm:max-h-[calc(100%-9rem)] sm:w-[26rem]">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card/90 shadow-lg backdrop-blur">
       <div className="flex items-center justify-between border-b px-3 py-1.5">
         <div className="flex gap-0.5" role="tablist" aria-label="Shading language">
           {SHADER_LANGUAGES.map((l) => (

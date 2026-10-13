@@ -13,12 +13,13 @@ import type { OpName } from './ops'
 
 export type ValueId = number
 
-export type IRInputName = 'uv' | 'time' | 'resolution'
+export type IRInputName = 'uv' | 'time' | 'resolution' | 'mouse'
 
 export const IR_INPUT_TYPES: Record<IRInputName, ValueType> = {
   uv: 'vec2',
   time: 'float',
   resolution: 'vec2',
+  mouse: 'vec2',
 }
 
 export type IRExpr =

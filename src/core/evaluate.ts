@@ -11,9 +11,10 @@ export interface Inputs {
   uv: [number, number]
   time: number
   resolution: [number, number]
+  mouse: [number, number]
 }
 
-const DEFAULT_INPUTS: Inputs = { uv: [0.5, 0.5], time: 0, resolution: [200, 100] }
+const DEFAULT_INPUTS: Inputs = { uv: [0.5, 0.5], time: 0, resolution: [200, 100], mouse: [0.5, 0.5] }
 
 type Fn = (...args: number[]) => number
 
@@ -25,6 +26,18 @@ function hash(px: number, py: number): number {
   const qx = Math.imul(px | 0, 1597334673)
   const qy = Math.imul(py | 0, 3812015801)
   let n = qx ^ qy
+  n = Math.imul(n ^ (n >>> 16), 2246822519)
+  return (n >>> 8) / 16777216
+}
+
+const seedFloats = new Float32Array(2)
+const seedBits = new Uint32Array(seedFloats.buffer)
+
+// Same formula as the shader helper `sf_random`: the hash of the bits of the two floats.
+function random(px: number, py: number): number {
+  seedFloats[0] = px
+  seedFloats[1] = py
+  let n = Math.imul(seedBits[0], 1597334673) ^ Math.imul(seedBits[1], 3812015801)
   n = Math.imul(n ^ (n >>> 16), 2246822519)
   return (n >>> 8) / 16777216
 }
@@ -52,6 +65,7 @@ const COMPONENTWISE: Record<string, Fn> = {
   div: (a, b) => a / b,
   sin: Math.sin,
   cos: Math.cos,
+  atan2: Math.atan2,
   abs: Math.abs,
   fract,
   floor: Math.floor,
@@ -101,6 +115,8 @@ export function evaluate(ir: IRModule, inputs: Partial<Inputs> = {}): number[] {
           out = [Math.hypot(...args[0])]
         } else if (e.op === 'noise') {
           out = [noise(args[0][0], args[0][1])]
+        } else if (e.op === 'random') {
+          out = [random(args[0][0], args[0][1])]
         } else {
           const fn = COMPONENTWISE[e.op]
           out = args[0].map((_, i) => fn(...args.map((a) => a[i])))

@@ -105,7 +105,7 @@ export class App {
   /** Text of the node-palette entries currently listed. */
   paletteItems() {
     return this.page.evaluate(() =>
-      [...document.querySelectorAll('[cmdk-item]')]
+      [...document.querySelectorAll('[data-palette-item]')]
         .filter((i) => (i as HTMLElement).offsetParent)
         .map((i) => i.querySelector('.font-medium')?.textContent ?? ''),
     )
@@ -155,7 +155,7 @@ export class App {
 
   async openPalette() {
     await this.key('k', ['Control'])
-    await this.page.waitForSelector('[cmdk-root]')
+    await this.page.waitForSelector('[data-palette]')
     await sleep(250)
   }
 

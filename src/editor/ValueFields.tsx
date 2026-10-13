@@ -11,6 +11,13 @@ const format = (n: number) => String(round(n))
 const SCRUB_THRESHOLD = 3
 /** Value change per pixel; Shift is coarse, Alt is fine. */
 const SCRUB_STEP = 0.01
+/** Same, for whole numbers: a count should not race through its few values. */
+const WHOLE_SCRUB_STEP = 0.05
+
+interface Whole {
+  min: number
+  max: number
+}
 
 /**
  * A compact number field. Drag horizontally to change the value (also works with touch
@@ -19,13 +26,17 @@ const SCRUB_STEP = 0.01
 function NumberField({
   title,
   value,
-  onChange,
+  whole,
+  onChange: emit,
 }: {
   /** Tooltip, e.g. the axis of a vector. */
   title?: string
   value: number
+  /** Only whole numbers within these bounds. */
+  whole?: Whole
   onChange: (n: number) => void
 }) {
+  const onChange = (n: number) => emit(whole ? Math.min(whole.max, Math.max(whole.min, Math.round(n))) : n)
   // While typing, keep the raw text so "-" or "0." are not rewritten under the cursor.
   const [draft, setDraft] = useState<string | null>(null)
   const scrub = useRef<{ x: number; value: number; moved: boolean } | null>(null)
@@ -60,7 +71,7 @@ function NumberField({
           if (!s.moved && Math.abs(dx) < SCRUB_THRESHOLD) return
           s.moved = true
           setDraft(null)
-          const speed = SCRUB_STEP * (e.shiftKey ? 10 : e.altKey ? 0.1 : 1)
+          const speed = (whole ? WHOLE_SCRUB_STEP : SCRUB_STEP) * (e.shiftKey ? 10 : e.altKey ? 0.1 : 1)
           onChange(round(s.value + dx * speed))
         }}
         onPointerUp={(e) => {
@@ -80,7 +91,7 @@ function NumberField({
           if (e.key === 'Enter') e.currentTarget.blur()
           if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
           e.preventDefault()
-          const step = (e.shiftKey ? 1 : 0.1) * (e.key === 'ArrowUp' ? 1 : -1)
+          const step = (whole || e.shiftKey ? 1 : 0.1) * (e.key === 'ArrowUp' ? 1 : -1)
           setDraft(null)
           onChange(round(value + step))
         }}
@@ -115,13 +126,14 @@ interface PortValueProps {
   type: ValueType
   value: number[]
   widget?: 'color'
+  whole?: Whole
   onChange: (value: number[]) => void
 }
 
 /** The editor of an unwired input, sized to sit on the same row as the port's label. */
-export function PortValue({ type, value, widget, onChange }: PortValueProps) {
+export function PortValue({ type, value, widget, whole, onChange }: PortValueProps) {
   if (widget === 'color' && type === 'vec3') return <ColorField value={value} onChange={onChange} />
-  if (type === 'float') return <NumberField value={value[0] ?? 0} onChange={(n) => onChange([n])} />
+  if (type === 'float') return <NumberField value={value[0] ?? 0} whole={whole} onChange={(n) => onChange([n])} />
   return (
     <div className="flex min-w-0 flex-1 gap-1">
       {AXES.slice(0, componentCount[type]).map((axis, i) => (

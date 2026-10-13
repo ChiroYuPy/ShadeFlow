@@ -3,36 +3,42 @@ import { ReactFlowProvider } from '@xyflow/react'
 import { compileGraph, generateGLSL } from '@/core'
 import { Editor } from '@/editor/Editor'
 import type { ShaderStatus } from '@/render/ShaderRenderer'
-import { copySelection, cutSelection, duplicateSelection, pasteText, selectAll } from '@/store/fileActions'
-import { redo, undo, useGraphStore } from '@/store/graphStore'
+import { useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
+import { Presence } from '@/ui/Presence'
 import { Preview } from '@/ui/Preview'
 import { ConfirmDialog } from '@/ui/ConfirmDialog'
 import { ContextMenu } from '@/ui/ContextMenu'
+import { Shortcuts } from '@/ui/Shortcuts'
 import { Toolbar } from '@/ui/Toolbar'
+import { useLast } from '@/ui/useLast'
 
 // Heavy or rarely used UI is loaded the first time it is needed.
 const loadPalette = () => import('@/ui/NodePalette')
 const loadCodePanel = () => import('@/ui/CodePanel')
 const loadHelp = () => import('@/ui/HelpDialog')
+const loadExamples = () => import('@/ui/ExamplesPanel')
 const NodePalette = lazy(loadPalette)
 const CodePanel = lazy(loadCodePanel)
 const HelpDialog = lazy(loadHelp)
+const ExamplesPanel = lazy(loadExamples)
 
 const NO_ERRORS: Record<string, string> = {}
-
-function isTyping(target: EventTarget | null) {
-  return target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
-}
-
-/** Number fields have no text history worth keeping: Ctrl+Z there undoes the graph. */
-const isNumberField = (target: EventTarget | null) => target instanceof HTMLElement && 'numberField' in target.dataset
 
 function App() {
   const graph = useGraphStore((s) => s.graph)
   const codeOpen = useUIStore((s) => s.codeOpen)
   const paletteOpen = useUIStore((s) => s.palette.open)
   const helpOpen = useUIStore((s) => s.helpOpen)
+  const examplesOpen = useUIStore((s) => s.examplesOpen)
+  // Overlays are loaded when first opened, then kept: they animate out by themselves.
+  const [paletteUsed, setPaletteUsed] = useState(false)
+  if (paletteOpen && !paletteUsed) setPaletteUsed(true)
+  const [examplesUsed, setExamplesUsed] = useState(false)
+  if (examplesOpen && !examplesUsed) setExamplesUsed(true)
+  const [helpUsed, setHelpUsed] = useState(false)
+  if (helpOpen && !helpUsed) setHelpUsed(true)
+  const resultOpen = useUIStore((s) => s.resultOpen)
   const notice = useUIStore((s) => s.notice)
   const result = useMemo(() => compileGraph(graph, { diagnoseAll: true }), [graph])
   const glsl = useMemo(() => (result.ok ? generateGLSL(result.ir) : null), [result])
@@ -46,83 +52,9 @@ function App() {
     return Object.fromEntries(Object.entries(byNode).map(([id, messages]) => [id, messages.join('\n')]))
   }, [result])
 
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      const ui = useUIStore.getState()
-      if (!e.ctrlKey && !e.metaKey && !e.altKey && !isTyping(e.target)) {
-        if (e.key === 'v') ui.setTool('select')
-        else if (e.key === 'h') ui.setTool('pan')
-      }
-      if (e.key === 'Escape' && ui.previewFullscreen) {
-        ui.setPreviewFullscreen(false)
-        return
-      }
-      if (e.key === '?' && !isTyping(e.target) && !e.ctrlKey && !e.metaKey) {
-        ui.setHelpOpen(!ui.helpOpen)
-        return
-      }
-      if (!(e.ctrlKey || e.metaKey)) return
-      const key = e.key.toLowerCase()
-      // Leaving the field drops its typed draft, so it shows the restored value after an undo.
-      if (isNumberField(e.target) && (key === 'z' || key === 'y')) (e.target as HTMLElement).blur()
-      if (key === 'k') {
-        e.preventDefault()
-        ui.openPalette()
-      } else if (key === 'a' && !isTyping(e.target)) {
-        e.preventDefault()
-        selectAll()
-      } else if (key === 'd' && !isTyping(e.target)) {
-        e.preventDefault() // the browser would bookmark the page
-        duplicateSelection()
-      } else if (isTyping(e.target) && !isNumberField(e.target)) {
-        return // let text fields use their own undo
-      } else if (key === 'z') {
-        e.preventDefault()
-        if (e.shiftKey) redo()
-        else undo()
-      } else if (key === 'y') {
-        e.preventDefault()
-        redo()
-      }
-    }
-
-    // Copy / cut / paste go through the browser's clipboard events, so they work
-    // across tabs and never fight with text fields (which handle their own).
-    const onCopy = (e: ClipboardEvent) => {
-      if (isTyping(e.target)) return
-      const text = copySelection()
-      if (text === null) return
-      e.clipboardData?.setData('text/plain', text)
-      e.preventDefault()
-    }
-    const onCut = (e: ClipboardEvent) => {
-      if (isTyping(e.target)) return
-      const text = cutSelection()
-      if (text === null) return
-      e.clipboardData?.setData('text/plain', text)
-      e.preventDefault()
-    }
-    const onPaste = (e: ClipboardEvent) => {
-      if (isTyping(e.target)) return
-      const text = e.clipboardData?.getData('text/plain')
-      if (text && pasteText(text)) e.preventDefault()
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    document.addEventListener('copy', onCopy)
-    document.addEventListener('cut', onCut)
-    document.addEventListener('paste', onPaste)
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      document.removeEventListener('copy', onCopy)
-      document.removeEventListener('cut', onCut)
-      document.removeEventListener('paste', onPaste)
-    }
-  }, [])
-
   // Fetch the lazy parts as soon as the editor is up, so opening them later is instant.
   useEffect(() => {
-    const t = setTimeout(() => void Promise.all([loadPalette(), loadCodePanel(), loadHelp()]), 200)
+    const t = setTimeout(() => void Promise.all([loadPalette(), loadCodePanel(), loadHelp(), loadExamples()]), 200)
     return () => clearTimeout(t)
   }, [])
 
@@ -132,36 +64,57 @@ function App() {
     return () => clearTimeout(t)
   }, [notice])
 
+  // What the graphics card says is only known (and up to date) while the result is drawn.
   const globalError =
     result.diagnostics.filter((d) => !d.nodeId).map((d) => d.message).join('\n') ||
-    (status && !status.ok ? status.log : '')
+    (resultOpen && status && !status.ok ? status.log : '')
+  // Panels that are leaving keep their last content.
+  const shownNotice = useLast(notice, notice !== null)
+  const errorAlone = globalError !== '' && !resultOpen
+  const shownError = useLast(globalError, errorAlone)
 
   return (
     <div className="relative h-full overflow-hidden">
       <ReactFlowProvider>
         <Editor errors={errors} />
+        <Shortcuts />
         <Toolbar />
         <ContextMenu />
         <ConfirmDialog />
-        <Suspense fallback={null}>{paletteOpen && <NodePalette />}</Suspense>
+        <Suspense fallback={null}>
+          {paletteUsed && <NodePalette />}
+          {examplesUsed && <ExamplesPanel />}
+        </Suspense>
       </ReactFlowProvider>
 
-      <Suspense fallback={null}>
-        {codeOpen && <CodePanel ir={result.ok ? result.ir : null} />}
-        {helpOpen && <HelpDialog />}
-      </Suspense>
-      <Preview code={glsl} onStatus={setStatus} failed={!!globalError || !result.ok} />
+      <Presence
+        show={codeOpen}
+        from="bottomOrLeft"
+        // As tall as its code needs on a wide screen, up to the bars below.
+        className="absolute inset-x-3 bottom-32 flex h-[40%] flex-col sm:inset-x-auto sm:top-[4.25rem] sm:bottom-auto sm:left-4 sm:h-auto sm:max-h-[calc(100%-9rem)] sm:w-[26rem]"
+      >
+        <Suspense fallback={null}>
+          <CodePanel ir={result.ok ? result.ir : null} />
+        </Suspense>
+      </Presence>
+      <Suspense fallback={null}>{helpUsed && <HelpDialog />}</Suspense>
+      <Preview code={glsl} onStatus={setStatus} error={globalError || (result.ok ? '' : 'The graph has an error, see the highlighted node.')} />
 
-      {globalError && (
-        <pre className="absolute top-28 right-3 max-w-[min(30rem,90%)] sm:top-44 sm:right-4 rounded-lg border border-destructive bg-card/90 p-3 text-xs whitespace-pre-wrap text-destructive">
-          {globalError}
-        </pre>
-      )}
-      {notice && (
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-lg border bg-card px-3 py-2 text-sm shadow-lg">
-          {notice}
-        </div>
-      )}
+      {/* The result panel shows the error itself; hidden, the error still has to be seen. */}
+      <Presence
+        show={errorAlone}
+        from="right"
+        className="absolute top-3 right-3 max-w-[min(30rem,90%)] rounded-lg border border-destructive bg-card/90 p-3 sm:top-4 sm:right-4"
+      >
+        <pre className="text-xs whitespace-pre-wrap text-destructive">{shownError}</pre>
+      </Presence>
+      <Presence
+        show={notice !== null}
+        from="bottom"
+        className="absolute bottom-32 left-1/2 -translate-x-1/2 rounded-lg border bg-card px-3 py-2 text-sm shadow-lg"
+      >
+        {shownNotice}
+      </Presence>
     </div>
   )
 }

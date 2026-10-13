@@ -29,6 +29,13 @@ float sf_noise(float2 p) {
   );
 }`
 
+const RANDOM = `float sf_random(float2 seed) {
+  uint2 q = asuint(seed) * uint2(1597334673u, 3812015801u);
+  uint n = q.x ^ q.y;
+  n = (n ^ (n >> 16)) * 2246822519u;
+  return float(n >> 8) / 16777216.0;
+}`
+
 const hlsl: Target = {
   typeName: (t) => TYPES[t],
   declare: (type, name, expr) => `  ${TYPES[type]} ${name} = ${expr};`,
@@ -39,6 +46,7 @@ const hlsl: Target = {
     div: { infix: '/' },
     sin: { call: 'sin' },
     cos: { call: 'cos' },
+    atan2: { call: 'atan2' },
     abs: { call: 'abs' },
     fract: { call: 'frac' },
     floor: { call: 'floor' },
@@ -52,16 +60,19 @@ const hlsl: Target = {
     step: { call: 'step' },
     length: { call: 'length' },
     noise: { call: 'sf_noise' },
+    random: { call: 'sf_random' },
   },
-  input: (name) => ({ uv: 'uv', time: 'time', resolution: 'resolution' })[name],
-  program: ({ usedOps, body, result, mark }) =>
+  input: (name) => ({ uv: 'uv', time: 'time', resolution: 'resolution', mouse: 'mouse' })[name],
+  program: ({ usedInputs, usedOps, body, result, mark }) =>
     [
       'cbuffer Uniforms : register(b0) {',
       mark('  float2 resolution;', 'resolution'),
       mark('  float time;', 'time'),
+      ...(usedInputs.has('mouse') ? [mark('  float2 mouse;', 'mouse')] : []),
       '};',
       '',
       ...(usedOps.has('noise') ? [NOISE, ''] : []),
+      ...(usedOps.has('random') ? [RANDOM, ''] : []),
       'float4 main(float4 position : SV_Position) : SV_Target {',
       '  // HLSL pixel coordinates start at the top-left: flip Y so uv matches GLSL.',
       mark('  float2 uv = float2(position.x, resolution.y - position.y) / resolution;', 'uv'),

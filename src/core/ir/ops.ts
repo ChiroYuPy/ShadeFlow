@@ -7,6 +7,7 @@ export type OpName =
   | 'div'
   | 'sin'
   | 'cos'
+  | 'atan2'
   | 'abs'
   | 'fract'
   | 'mix'
@@ -20,6 +21,7 @@ export type OpName =
   | 'clamp'
   | 'length'
   | 'noise'
+  | 'random'
 
 export type OpSpec =
   /** All arguments share one type T, result is T. */
@@ -36,6 +38,8 @@ export const OPS: Record<OpName, OpSpec> = {
   div: { kind: 'componentwise', arity: 2 },
   sin: { kind: 'componentwise', arity: 1 },
   cos: { kind: 'componentwise', arity: 1 },
+  /** Angle of the direction (x, y), in radians from -π to π. Arguments are `(y, x)`. */
+  atan2: { kind: 'componentwise', arity: 2 },
   abs: { kind: 'componentwise', arity: 1 },
   fract: { kind: 'componentwise', arity: 1 },
   floor: { kind: 'componentwise', arity: 1 },
@@ -50,4 +54,6 @@ export const OPS: Record<OpName, OpSpec> = {
   step: { kind: 'componentwise', arity: 2 },
   length: { kind: 'reduce', arity: 1 },
   noise: { kind: 'fixed', args: ['vec2'], result: 'float' },
+  /** A value between 0 and 1 that only depends on the seed, with no visible pattern. */
+  random: { kind: 'fixed', args: ['vec2'], result: 'float' },
 }

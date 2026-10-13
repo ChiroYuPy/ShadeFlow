@@ -14,10 +14,11 @@ const TYPES: Record<ValueType, string> = {
   vec4: 'vec4<f32>',
 }
 
-const NOISE = `fn sf_hash(p_in: vec2<f32>) -> f32 {
-  var p = fract(p_in * vec2<f32>(123.34, 456.21));
-  p = p + dot(p, p + 45.32);
-  return fract(p.x * p.y);
+const NOISE = `fn sf_hash(p: vec2<f32>) -> f32 {
+  let q = vec2<u32>(vec2<i32>(p)) * vec2<u32>(1597334673u, 3812015801u);
+  var n = q.x ^ q.y;
+  n = (n ^ (n >> 16u)) * 2246822519u;
+  return f32(n >> 8u) / 16777216.0;
 }
 
 fn sf_noise(p: vec2<f32>) -> f32 {

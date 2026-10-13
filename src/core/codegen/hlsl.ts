@@ -12,9 +12,10 @@ const TYPES: Record<ValueType, string> = {
 }
 
 const NOISE = `float sf_hash(float2 p) {
-  p = frac(p * float2(123.34, 456.21));
-  p += dot(p, p + 45.32);
-  return frac(p.x * p.y);
+  uint2 q = uint2(int2(p)) * uint2(1597334673u, 3812015801u);
+  uint n = q.x ^ q.y;
+  n = (n ^ (n >> 16)) * 2246822519u;
+  return float(n >> 8) / 16777216.0;
 }
 
 float sf_noise(float2 p) {

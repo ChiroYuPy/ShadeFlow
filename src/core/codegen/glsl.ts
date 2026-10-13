@@ -3,10 +3,13 @@ import { emit, type Emitted, type Target } from './emit'
 
 /** GLSL ES 3.00 (WebGL2) backend. */
 
+// The hash works on integers: integer math is exact, so every GPU gives the same
+// noise (a float hash rounds differently from one GPU to the next, mobile ones especially).
 const NOISE = `float sf_hash(vec2 p) {
-  p = fract(p * vec2(123.34, 456.21));
-  p += dot(p, p + 45.32);
-  return fract(p.x * p.y);
+  uvec2 q = uvec2(ivec2(p)) * uvec2(1597334673u, 3812015801u);
+  uint n = q.x ^ q.y;
+  n = (n ^ (n >> 16)) * 2246822519u;
+  return float(n >> 8) / 16777216.0;
 }
 
 float sf_noise(vec2 p) {
@@ -49,6 +52,8 @@ const glsl: Target = {
     [
       '#version 300 es',
       'precision highp float;',
+      // Integers default to mediump (often 16 bits on phones): the hash needs all 32.
+      ...(usedOps.has('noise') ? ['precision highp int;'] : []),
       '',
       mark('uniform vec2 u_resolution;', 'resolution'),
       ...(usedInputs.has('time') ? [mark('uniform float u_time;', 'time')] : []),

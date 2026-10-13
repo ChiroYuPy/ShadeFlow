@@ -22,12 +22,11 @@ const fract = (x: number) => x - Math.floor(x)
 
 // Same formulas as the shader helper `sf_noise` (see codegen).
 function hash(px: number, py: number): number {
-  let x = fract(px * 123.34)
-  let y = fract(py * 456.21)
-  const d = x * (x + 45.32) + y * (y + 45.32)
-  x += d
-  y += d
-  return fract(x * y)
+  const qx = Math.imul(px | 0, 1597334673)
+  const qy = Math.imul(py | 0, 3812015801)
+  let n = qx ^ qy
+  n = Math.imul(n ^ (n >>> 16), 2246822519)
+  return (n >>> 8) / 16777216
 }
 
 function noise(px: number, py: number): number {

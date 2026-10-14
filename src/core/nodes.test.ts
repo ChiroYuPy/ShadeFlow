@@ -246,6 +246,62 @@ describe('what nodes compute', () => {
     close(run('centered-uv', {}, { uv: [0, 0], resolution: [100, 100] }), [-0.5, -0.5])
   })
 
+  it('Square Root, Sign, Ceil and Saturate behave', () => {
+    close(run('sqrt', { x: [0.25] }), [0.5])
+    close(run('sign', { x: [-3] }), [-1])
+    close(run('sign', { x: [0] }), [0])
+    close(run('ceil', { x: [1.25] }), [2])
+    close(run('ceil', { x: [-1.5] }), [-1])
+    close(run('saturate', { x: [1.5] }), [1])
+    close(run('saturate', { x: [-2] }), [0])
+  })
+
+  it('Dot adds up the products, Normalize makes a length of 1', () => {
+    const vectors = (type: 'dot' | 'normalize', port: string) => {
+      const g = build()
+      const a = g.node('vec2', { x: [3], y: [4] })
+      const b = g.node('vec2', { x: [2], y: [0.5] })
+      const node = g.node(type)
+      g.wire(a, 'vector', node, type === 'dot' ? 'a' : 'value')
+      if (type === 'dot') g.wire(b, 'vector', node, 'b')
+      const result = compileGraph(g.graph, { root: { nodeId: node, port } })
+      if (!result.ok) throw new Error(result.diagnostics[0].message)
+      return evaluate(result.ir)
+    }
+    close(vectors('dot', 'result'), [3 * 2 + 4 * 0.5])
+    close(vectors('normalize', 'result'), [0.6, 0.8, 0])
+  })
+
+  it('Tiling and Offset scales then moves', () => {
+    close(run('tiling-offset', { tiling: [2, 3], offset: [0.5, 0] }, { uv: [0.25, 0.5] }, 'position'), [1, 1.5])
+  })
+
+  it('Checkerboard alternates from one square to the next', () => {
+    const at = (x: number, y: number) => run('checkerboard', { count: [2] }, { uv: [x, y] })[0]
+    expect(at(0.25, 0.25)).toBe(0)
+    expect(at(0.75, 0.25)).toBe(1)
+    expect(at(0.75, 0.75)).toBe(0)
+  })
+
+  it('Voronoi measures the distance to the nearest point and colors each cell', () => {
+    // no randomness: the points sit on the grid corners, so the middle of a square is √0.5 away
+    close(run('voronoi', { scale: [1], randomness: [0] }, { uv: [0.5, 0.5] }, 'distance'), [Math.SQRT1_2])
+    close(run('voronoi', { scale: [1], randomness: [0] }, { uv: [0.1, 0.1] }, 'distance'), [Math.hypot(0.1, 0.1)])
+    // scattered points: distances stay below the size of a square, cells take varied values in 0…1
+    const cells = new Set<string>()
+    for (let i = 0; i < 40; i++) {
+      const uv: [number, number] = [(i * 0.37) % 1, (i * 0.61) % 1]
+      const d = run('voronoi', { scale: [4] }, { uv }, 'distance')[0]
+      const c = run('voronoi', { scale: [4] }, { uv }, 'cell')[0]
+      expect(d).toBeGreaterThanOrEqual(0)
+      expect(d).toBeLessThan(1.5)
+      expect(c).toBeGreaterThanOrEqual(0)
+      expect(c).toBeLessThanOrEqual(1)
+      cells.add(c.toFixed(4))
+    }
+    expect(cells.size).toBeGreaterThan(5)
+  })
+
   it('One Minus, Clamp, Floor and Power behave', () => {
     close(run('one-minus', { x: [0.25] }), [0.75])
     close(run('clamp', { x: [2], min: [0], max: [1] }), [1])

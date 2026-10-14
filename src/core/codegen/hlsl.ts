@@ -50,6 +50,10 @@ const hlsl: Target = {
     abs: { call: 'abs' },
     fract: { call: 'frac' },
     floor: { call: 'floor' },
+    ceil: { call: 'ceil' },
+    sqrt: { call: 'sqrt' },
+    // Returns ints: every value is declared with its float type, which converts them.
+    sign: { call: 'sign' },
     min: { call: 'min' },
     max: { call: 'max' },
     pow: { call: 'pow' },

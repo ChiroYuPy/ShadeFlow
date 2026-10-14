@@ -59,6 +59,17 @@ function mathNode(
   }
 }
 
+/** Adds up the components of a vector (a float is returned as is). */
+function sumComponents(b: IRBuilder, value: ValueId): ValueId {
+  const type = b.typeOf(value)
+  if (type === 'float') return value
+  const parts = [...'xyzw'.slice(0, { vec2: 2, vec3: 3, vec4: 4 }[type])].map((c) => b.swizzle(value, c))
+  return parts.slice(1).reduce((sum, part) => b.op('add', [sum, part]), parts[0])
+}
+
+/** Most cells a Voronoi looks at around the pixel: its own and the 8 around it. */
+const VORONOI_NEIGHBORS = [-1, 0, 1].flatMap((y) => [-1, 0, 1].map((x) => [x, y] as const))
+
 const ab = (a: number, b: number) => [gen('a', 'A', a), gen('b', 'B', b)]
 const x = (value = 0) => [gen('x', 'X', value)]
 
@@ -174,6 +185,22 @@ export const BUILTIN_NODES: NodeDef[] = [
     gen('exponent', 'Exponent', 2),
   ]),
   mathNode('math', 'abs', 'Abs', 'Absolute value: removes the sign, so -0.5 becomes 0.5.', 'abs', x()),
+  mathNode(
+    'math',
+    'sqrt',
+    'Square Root',
+    'The number that, multiplied by itself, gives X: the square root of 0.25 is 0.5. On a 0…1 gradient it brightens the dark end.',
+    'sqrt',
+    x(0.25),
+  ),
+  mathNode(
+    'math',
+    'sign',
+    'Sign',
+    'Tells on which side of zero X is: -1 when negative, 0 at zero, 1 when positive.',
+    'sign',
+    x(),
+  ),
 
   // ── Trigonometry ─────────────────────────────────────────────────────────
   mathNode('trigonometry', 'sin', 'Sin', 'Sine wave: smoothly oscillates between -1 and 1.', 'sin', x()),
@@ -188,6 +215,7 @@ export const BUILTIN_NODES: NodeDef[] = [
     'floor',
     x(),
   ),
+  mathNode('round', 'ceil', 'Ceil', 'Rounds up to the nearest whole number: 1.25 becomes 2.', 'ceil', x()),
   {
     type: 'round',
     label: 'Round',
@@ -231,6 +259,18 @@ export const BUILTIN_NODES: NodeDef[] = [
     gen('min', 'Min', 0),
     gen('max', 'Max', 1),
   ]),
+  {
+    type: 'saturate',
+    label: 'Saturate',
+    description:
+      'Keeps X between 0 and 1: below 0 becomes 0, above 1 becomes 1. A Clamp with Min 0 and Max 1, the range colors and masks live in.',
+    category: 'range',
+    inputs: x(1.5),
+    outputs: [{ name: 'result', label: 'Result', type: 'gen' }],
+    lower: ({ b, type, inputs }) => ({
+      result: b.op('clamp', [inputs.x, b.convert(b.constant('float', [0]), type), b.convert(b.constant('float', [1]), type)]),
+    }),
+  },
   {
     type: 'remap',
     label: 'Remap',
@@ -336,8 +376,44 @@ export const BUILTIN_NODES: NodeDef[] = [
     outputs: [{ name: 'result', label: 'Result', type: 'float' }],
     lower: ({ b, inputs: v }) => ({ result: b.op('length', [b.op('sub', [v.a, v.b])]) }),
   },
+  {
+    type: 'dot',
+    label: 'Dot',
+    description:
+      'Multiplies A and B component by component and adds the results up. For two directions of length 1, it is 1 when they point the same way, 0 when they are at a right angle and -1 when opposite: the basis of lighting.',
+    category: 'vector',
+    inputs: ab(1, 1),
+    outputs: [{ name: 'result', label: 'Result', type: 'float' }],
+    lower: ({ b, inputs: v }) => ({ result: sumComponents(b, b.op('mul', [v.a, v.b])) }),
+  },
+  {
+    type: 'normalize',
+    label: 'Normalize',
+    description:
+      'Keeps the direction of a vector but makes its length 1, by dividing it by its length. Useful to compare directions with Dot. A zero vector has no direction: the result is undefined.',
+    category: 'vector',
+    inputs: [gen('value', 'Value', 1)],
+    outputs: [{ name: 'result', label: 'Result', type: 'gen' }],
+    lower: ({ b, type, inputs }) => ({
+      result: b.op('div', [inputs.value, b.convert(b.op('length', [inputs.value]), type)]),
+    }),
+  },
 
   // ── UV ───────────────────────────────────────────────────────────────────
+  {
+    type: 'tiling-offset',
+    label: 'Tiling and Offset',
+    description:
+      'Scales then moves a position: Position × Tiling + Offset. A Tiling of 2 makes everything drawn with it twice smaller (it fits twice), an Offset slides it. Wire Time into Offset to scroll.',
+    category: 'uv',
+    inputs: [
+      position(),
+      { name: 'tiling', label: 'Tiling', type: 'vec2', default: [1, 1] },
+      { name: 'offset', label: 'Offset', type: 'vec2', default: [0, 0] },
+    ],
+    outputs: [{ name: 'position', label: 'Position', type: 'vec2' }],
+    lower: ({ b, inputs: v }) => ({ position: b.op('add', [b.op('mul', [v.position, v.tiling]), v.offset]) }),
+  },
   {
     type: 'tile',
     label: 'Tile',
@@ -475,6 +551,20 @@ export const BUILTIN_NODES: NodeDef[] = [
     },
   },
   {
+    type: 'checkerboard',
+    label: 'Checkerboard',
+    description:
+      'A mask of alternating squares, like a chessboard: 1 on one color, 0 on the other. Count is the number of squares across the 0…1 square. It adds the row and column numbers: even is 0, odd is 1.',
+    category: 'procedural',
+    inputs: [position(), float('count', 'Count', 8)],
+    outputs: [{ name: 'result', label: 'Result', type: 'float' }],
+    lower: ({ b, inputs: v }) => {
+      const cell = b.op('floor', [b.op('mul', [v.position, b.construct('vec2', [v.count])])])
+      const sum = b.op('add', [b.swizzle(cell, 'x'), b.swizzle(cell, 'y')])
+      return { result: b.op('mod', [sum, b.constant('float', [2])]) }
+    },
+  },
+  {
     type: 'random',
     label: 'Random',
     description:
@@ -525,6 +615,41 @@ export const BUILTIN_NODES: NodeDef[] = [
         total = b.op('add', [total, weight])
       }
       return { result: b.op('div', [sum, total]) }
+    },
+  },
+  {
+    type: 'voronoi',
+    label: 'Voronoi',
+    description:
+      'Cells, like stones, scales or bubbles. The space is cut into a grid; each square gets one point at a random place, and every pixel belongs to the nearest point. Distance is how far that point is (dark in the middle of a cell), Cell a random value per cell (to color each one). Randomness 0 lines the points up, 1 scatters them.',
+    category: 'procedural',
+    inputs: [position(), float('scale', 'Scale', 5), float('randomness', 'Randomness', 1)],
+    outputs: [
+      { name: 'distance', label: 'Distance', type: 'float' },
+      { name: 'cell', label: 'Cell', type: 'float' },
+    ],
+    lower: ({ b, inputs: v }) => {
+      const scaled = b.op('mul', [v.position, b.construct('vec2', [v.scale])])
+      const square = b.op('floor', [scaled])
+      const inSquare = b.op('fract', [scaled])
+      let nearest = b.constant('float', [8])
+      let cell = b.constant('float', [0])
+      // The nearest point is in this square or one around it: look at all nine.
+      for (const [dx, dy] of VORONOI_NEIGHBORS) {
+        const offset = b.constant('vec2', [dx, dy])
+        const id = b.op('add', [square, offset])
+        const jitter = b.construct('vec2', [
+          b.op('random', [id]),
+          b.op('random', [b.op('add', [id, b.constant('vec2', [17.31, 41.57])])]),
+        ])
+        const point = b.op('add', [offset, b.op('mul', [jitter, b.construct('vec2', [v.randomness])])])
+        const distance = b.op('length', [b.op('sub', [point, inSquare])])
+        // 1 when this point is the nearest so far: then its cell value is kept.
+        const closer = b.op('step', [distance, nearest])
+        cell = b.op('mix', [cell, b.op('random', [b.op('add', [id, b.constant('vec2', [5.13, 3.77])])]), closer])
+        nearest = b.op('min', [nearest, distance])
+      }
+      return { distance: nearest, cell }
     },
   },
 

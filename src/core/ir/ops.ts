@@ -14,6 +14,9 @@ export type OpName =
   | 'smoothstep'
   | 'step'
   | 'floor'
+  | 'ceil'
+  | 'sqrt'
+  | 'sign'
   | 'min'
   | 'max'
   | 'pow'
@@ -43,6 +46,10 @@ export const OPS: Record<OpName, OpSpec> = {
   abs: { kind: 'componentwise', arity: 1 },
   fract: { kind: 'componentwise', arity: 1 },
   floor: { kind: 'componentwise', arity: 1 },
+  ceil: { kind: 'componentwise', arity: 1 },
+  sqrt: { kind: 'componentwise', arity: 1 },
+  /** -1, 0 or 1. */
+  sign: { kind: 'componentwise', arity: 1 },
   min: { kind: 'componentwise', arity: 2 },
   max: { kind: 'componentwise', arity: 2 },
   pow: { kind: 'componentwise', arity: 2 },

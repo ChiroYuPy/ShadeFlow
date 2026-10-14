@@ -165,6 +165,8 @@ export class App {
     await this.page.keyboard.type(name)
     await sleep(150)
     await this.page.keyboard.press('Enter')
-    await sleep(300)
+    // Until the palette has left, it keeps the focus and the keys.
+    await this.page.waitForSelector('[data-palette]', { hidden: true })
+    await sleep(100)
   }
 }

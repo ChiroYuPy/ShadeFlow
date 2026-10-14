@@ -488,12 +488,50 @@ describe('editing', () => {
     const original = await read()
     await app.page.click(field)
     await app.page.keyboard.type('7')
+    await app.key('Enter')
     await app.sleep(900)
     expect(await read()).toBe('7')
     await app.key('z', ['Control'])
     expect(await read()).toBe(original)
     await app.key('z', ['Control', 'Shift'])
     expect(await read()).toBe('7')
+  })
+
+  it('hands a dragged number to the graph only when it is let go', async () => {
+    const field = '[data-number-field]'
+    const read = () => app.page.$eval(field, (e) => (e as HTMLInputElement).value)
+    const code = () => app.page.$eval('pre', (e) => e.textContent)
+    await app.key('c')
+    await app.sleep(500)
+    const before = await code()
+    const original = await read()
+
+    const box = (await (await app.page.$(field))!.boundingBox())!
+    await app.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await app.page.mouse.down()
+    await app.page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2, { steps: 6 })
+    await app.sleep(300)
+    // the field follows the drag, the shader does not
+    expect(await read()).not.toBe(original)
+    expect(await code()).toBe(before)
+
+    await app.page.mouse.up()
+    await app.sleep(500)
+    expect(await code()).not.toBe(before)
+    // one drag, one undo step
+    await app.key('z', ['Control'])
+    expect(await read()).toBe(original)
+    await app.key('c')
+  })
+
+  it('gives up a typed number with Escape', async () => {
+    const field = '[data-number-field]'
+    const read = () => app.page.$eval(field, (e) => (e as HTMLInputElement).value)
+    const original = await read()
+    await app.page.click(field)
+    await app.page.keyboard.type('42')
+    await app.key('Escape')
+    expect(await read()).toBe(original)
   })
 
   it('deletes the selection with the keyboard but never the Output node', async () => {

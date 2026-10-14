@@ -2,6 +2,7 @@ import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { Trash2 } from 'lucide-react'
 import { MAX_RAMP_STOPS, MIN_RAMP_STOPS, readRamp, sampleRamp, writeRamp, type RampStop } from '@/core'
 import { cn } from '@/lib/utils'
+import { useDraft } from './useDraft'
 import { ColorField, NumberField } from './ValueFields'
 
 const css = (c: readonly number[]) => `rgb(${c.map((v) => Math.round(v * 255)).join(' ')})`
@@ -10,11 +11,13 @@ const round = (n: number) => Math.round(n * 1000) / 1000
 
 /**
  * The gradient of a Color Ramp: click the bar to add a color, drag a color to move it, click one
- * to edit it below the bar. A selected color is only selected while the field has the focus:
+ * to edit it below the bar. While a color is dragged, only the bar follows: the graph gets the
+ * gradient when it is let go. A selected color is only selected while the field has the focus:
  * clicking elsewhere or Escape drops it, Delete removes it (and not the node).
  */
 export function RampField({ value, onChange }: { value: number[]; onChange: (values: number[]) => void }) {
-  const stops = readRamp(value)
+  const draft = useDraft(value, onChange)
+  const stops = readRamp(draft.shown)
   const [selected, setSelected] = useState<number | null>(null)
   const current = selected === null ? null : Math.min(selected, stops.length - 1)
   const field = useRef<HTMLDivElement>(null)
@@ -27,8 +30,11 @@ export function RampField({ value, onChange }: { value: number[]; onChange: (val
     const sorted = [...list].sort((a, b) => a.position - b.position)
     const index = sorted.indexOf(stop)
     setSelected(index)
-    if (dragging.current !== null) dragging.current = index
-    onChange(writeRamp(sorted))
+    if (dragging.current === null) onChange(writeRamp(sorted))
+    else {
+      dragging.current = index
+      draft.change(writeRamp(sorted))
+    }
   }
 
   const update = (index: number, change: Partial<RampStop>) => {
@@ -57,6 +63,12 @@ export function RampField({ value, onChange }: { value: number[]; onChange: (val
     field.current?.focus()
   }
 
+  const release = () => {
+    if (dragging.current === null) return
+    dragging.current = null
+    draft.commit()
+  }
+
   const onKeyDown = (e: KeyboardEvent) => {
     // The fields below keep their keys (Backspace edits the text).
     if (current === null || e.target instanceof HTMLInputElement) return
@@ -83,8 +95,8 @@ export function RampField({ value, onChange }: { value: number[]; onChange: (val
       onPointerMove={(e) => {
         if (dragging.current !== null) update(dragging.current, { position: positionAt(e) })
       }}
-      onPointerUp={() => (dragging.current = null)}
-      onPointerCancel={() => (dragging.current = null)}
+      onPointerUp={release}
+      onPointerCancel={release}
     >
       {/* The bar and the colors share one track, inset by half a color so the ends sit on its edges. */}
       <div className="px-1.5">

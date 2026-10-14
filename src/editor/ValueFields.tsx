@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { componentCount, type ValueType } from '@/core'
 import { cn } from '@/lib/utils'
+import { useDraft } from './useDraft'
 
 const AXES = ['x', 'y', 'z', 'w']
 
@@ -22,6 +23,8 @@ interface Whole {
 /**
  * A compact number field. Drag horizontally to change the value (also works with touch
  * and gives access to negative numbers on keypads without a minus sign); click to type.
+ * The graph gets the value when the drag ends, or when the typing is validated (Enter, or
+ * leaving the field); Escape gives up the typing.
  */
 export function NumberField({
   title,
@@ -36,9 +39,10 @@ export function NumberField({
   whole?: Whole
   onChange: (n: number) => void
 }) {
-  const onChange = (n: number) => emit(whole ? Math.min(whole.max, Math.max(whole.min, Math.round(n))) : n)
+  const fit = (n: number) => (whole ? Math.min(whole.max, Math.max(whole.min, Math.round(n))) : n)
+  const draft = useDraft(value, emit)
   // While typing, keep the raw text so "-" or "0." are not rewritten under the cursor.
-  const [draft, setDraft] = useState<string | null>(null)
+  const [text, setText] = useState<string | null>(null)
   const scrub = useRef<{ x: number; value: number; moved: boolean } | null>(null)
 
   return (
@@ -53,8 +57,11 @@ export function NumberField({
           'outline-none focus:cursor-text focus:ring-1 focus:ring-ring',
         )}
         style={{ touchAction: 'none' }}
-        value={draft ?? format(value)}
-        onBlur={() => setDraft(null)}
+        value={text ?? format(draft.shown)}
+        onBlur={() => {
+          setText(null)
+          draft.commit()
+        }}
         // Not focused yet: take over the press so a drag scrubs instead of placing a caret.
         onMouseDown={(e) => {
           if (document.activeElement !== e.currentTarget) e.preventDefault()
@@ -70,30 +77,46 @@ export function NumberField({
           const dx = e.clientX - s.x
           if (!s.moved && Math.abs(dx) < SCRUB_THRESHOLD) return
           s.moved = true
-          setDraft(null)
           const speed = (whole ? WHOLE_SCRUB_STEP : SCRUB_STEP) * (e.shiftKey ? 10 : e.altKey ? 0.1 : 1)
-          onChange(round(s.value + dx * speed))
+          draft.change(fit(round(s.value + dx * speed)))
         }}
         onPointerUp={(e) => {
           const s = scrub.current
           scrub.current = null
-          if (s && !s.moved) {
+          if (s?.moved) draft.commit()
+          else if (s) {
             e.currentTarget.focus()
             e.currentTarget.select()
           }
         }}
+        onPointerCancel={() => {
+          if (scrub.current?.moved) draft.commit()
+          scrub.current = null
+        }}
         onChange={(e) => {
-          setDraft(e.target.value)
+          setText(e.target.value)
           const n = Number(e.target.value.replace(',', '.'))
-          if (e.target.value.trim() !== '' && Number.isFinite(n)) onChange(n)
+          if (e.target.value.trim() !== '' && Number.isFinite(n)) draft.change(fit(n))
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') e.currentTarget.blur()
+          // Escape, or undo before the typing is validated: the typing is all there is to undo.
+          const undo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'
+          if ((e.key === 'Escape' || undo) && draft.pending) {
+            e.preventDefault()
+            e.stopPropagation()
+            setText(null)
+            draft.cancel()
+            if (e.key === 'Escape') e.currentTarget.blur()
+            return
+          }
           if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
           e.preventDefault()
+          // A step of the arrows is a value already validated.
           const step = (whole || e.shiftKey ? 1 : 0.1) * (e.key === 'ArrowUp' ? 1 : -1)
-          setDraft(null)
-          onChange(round(value + step))
+          setText(null)
+          draft.cancel()
+          emit(fit(round(draft.shown + step)))
         }}
       />
     </div>
@@ -105,17 +128,32 @@ const toHex = (rgb: number[]) =>
 
 const fromHex = (hex: string) => [1, 3, 5].map((i) => Math.round((parseInt(hex.slice(i, i + 2), 16) / 255) * 1000) / 1000)
 
-/** Color field: hex code and swatch. The whole field opens the picker. */
+/**
+ * Color field: hex code and swatch. The whole field opens the picker. The swatch follows the
+ * picker; the graph gets the color when the picker is closed.
+ */
 export function ColorField({ value, onChange }: { value: number[]; onChange: (v: number[]) => void }) {
-  const hex = toHex(value)
+  const draft = useDraft(value, onChange)
+  const hex = toHex(draft.shown)
+  const input = useRef<HTMLInputElement>(null)
+  // React's onChange is the native `input` event (every step of the picker); `change` is the end.
+  const commit = useEffectEvent(() => draft.commit())
+  useEffect(() => {
+    const el = input.current!
+    el.addEventListener('change', commit)
+    return () => el.removeEventListener('change', commit)
+  }, [])
   return (
     <label className="nodrag nopan relative flex h-6 min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-md bg-background/70 px-1.5 text-xs">
       <span className="ml-auto tabular-nums text-muted-foreground uppercase">{hex.slice(1)}</span>
       <span className="size-3.5 rounded-sm border" style={{ background: hex }} />
       <input
+        ref={input}
         type="color"
         value={hex}
-        onChange={(e) => onChange(fromHex(e.target.value))}
+        onChange={(e) => draft.change(fromHex(e.target.value))}
+        // In case a browser closes its picker without a `change`.
+        onBlur={draft.commit}
         className="absolute inset-0 size-full cursor-pointer opacity-0"
       />
     </label>

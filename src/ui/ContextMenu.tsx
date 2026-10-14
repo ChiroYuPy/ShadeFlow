@@ -24,7 +24,7 @@ export function ContextMenu() {
         {/* A right-click on a node selects it first, so "the nodes" are always the selection. */}
         {menu.target === 'pane' && <ActionMenuItems items={MENUS.pane} state={state} env={{ ...env, at: menu.at }} labels={{ add: 'Add a node here' }} />}
         {menu.target === 'node' && <ActionMenuItems items={MENUS.selection} state={state} env={env} />}
-        {menu.target === 'edge' && <ActionMenuItems items={['delete']} state={state} env={env} labels={{ delete: 'Delete wire' }} />}
+        {menu.target === 'edge' && <ActionMenuItems items={MENUS.wire} state={state} env={{ ...env, at: menu.at }} labels={{ delete: 'Delete wire' }} />}
       </DropdownMenuContent>
     </DropdownMenu>
   )

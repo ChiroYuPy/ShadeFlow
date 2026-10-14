@@ -28,7 +28,7 @@ export function compileToGLSL(graph: Graph, options?: CompileOptions): ShaderRes
   const result = compileGraph(graph, options)
   return result.ok ? { ok: true, code: generateGLSL(result.ir) } : result
 }
-export { canConnect, compatiblePort, concreteType, resolveGenTypes, type WireAnchor } from './typing'
+export { canConnect, compatiblePort, concreteType, insertPorts, resolveGenTypes, type WireAnchor } from './typing'
 
 export const SHADER_LANGUAGES = ['glsl', 'wgsl', 'hlsl'] as const
 export type ShaderLanguage = (typeof SHADER_LANGUAGES)[number]

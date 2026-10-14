@@ -117,3 +117,25 @@ export function compatiblePort(graph: Graph, anchor: WireAnchor, nodeType: strin
   const to = { nodeId: anchor.nodeId, port: anchor.port }
   return def.outputs.find((p) => canConnect(withNode, { nodeId: probe, port: p.name }, to))?.name ?? null
 }
+
+/**
+ * The ports of a *new* node of type `nodeType` put in the middle of a wire: the input that takes
+ * what the wire carried, and the output that feeds where it went. `null` if it cannot go there.
+ */
+export function insertPorts(graph: Graph, edgeId: string, nodeType: string): { input: string; output: string } | null {
+  const edge = graph.edges.find((e) => e.id === edgeId)
+  const def = getNodeDef(nodeType)
+  if (!edge || !def) return null
+  const probe = '\u0000new'
+  const nodes = { ...graph.nodes, [probe]: { id: probe, type: nodeType, position: { x: 0, y: 0 }, values: {} } }
+  const without = graph.edges.filter((e) => e.id !== edgeId)
+  for (const input of def.inputs) {
+    const fed: Graph = { nodes, edges: without }
+    if (!canConnect(fed, edge.from, { nodeId: probe, port: input.name })) continue
+    // Once fed, the new node's generic ports have their type: the output must suit the old target.
+    const wired: Graph = { nodes, edges: [...without, { id: probe, from: edge.from, to: { nodeId: probe, port: input.name } }] }
+    const output = def.outputs.find((o) => canConnect(wired, { nodeId: probe, port: o.name }, edge.to))
+    if (output) return { input: input.name, output: output.name }
+  }
+  return null
+}

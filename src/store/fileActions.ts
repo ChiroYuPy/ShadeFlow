@@ -171,18 +171,20 @@ export function describeSelection(graph: Graph, selected: ReadonlySet<string>) {
     const def = getNodeDef(n.type)
     return def && def.type !== 'output' && def.preview !== 'none'
   })
-  const wires = graph.edges.filter((e) => selected.has(e.id)).length
+  const wires = graph.edges.filter((e) => selected.has(e.id))
   return {
     /** Shader nodes (no notes). */
     nodes,
     previewable,
     /** Shader nodes with a value that can be reset. */
     withValues: nodes.filter((n) => Object.keys(n.values).length > 0),
+    /** The selected wires' ids. */
+    wires: wires.map((e) => e.id),
     /** Everything selected that still exists. */
-    count: all.length + wires,
+    count: all.length + wires.length,
     copyable: all.some((n) => n.type !== 'output'),
     /** The Output node can be neither deleted nor cut. */
-    removable: wires > 0 || all.some((n) => n.type !== 'output'),
+    removable: wires.length > 0 || all.some((n) => n.type !== 'output'),
     // Toggles show the opposite of what the first node does, applied to all so they end up alike.
     showPreviews: !previewable[0]?.showPreview,
     fold: !nodes[0]?.collapsed,

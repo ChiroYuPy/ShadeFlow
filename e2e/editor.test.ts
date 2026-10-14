@@ -430,6 +430,32 @@ describe('right-click menus', () => {
     expect(await app.edgeCount()).toBe(before - 1)
   })
 
+  it('inserts a node in the middle of a wire', async () => {
+    const edges = await app.edgeCount()
+    const nodes = await app.nodeCount()
+    const at = await app.page.evaluate(() => {
+      const path = document.querySelector<SVGPathElement>('.react-flow__edge-interaction')!
+      const p = path.getPointAtLength(path.getTotalLength() * 0.5)
+      const m = path.getScreenCTM()!
+      return { x: p.x * m.a + m.e, y: p.y * m.d + m.f }
+    })
+    await app.page.mouse.click(at.x, at.y, { button: 'right' })
+    await app.page.waitForSelector('[role=menu]')
+    await app.clickMenuItem('Insert a node')
+    await app.page.waitForSelector('[data-palette]')
+    await app.sleep(250)
+    await app.page.keyboard.type('abs')
+    await app.sleep(150)
+    await app.page.keyboard.press('Enter')
+    await app.sleep(300)
+    // one wire became two, around the new node; a single undo puts it all back
+    expect(await app.nodeTitles()).toContain('Abs')
+    expect(await app.edgeCount()).toBe(edges + 1)
+    await app.key('z', ['Control'])
+    expect(await app.nodeCount()).toBe(nodes)
+    expect(await app.edgeCount()).toBe(edges)
+  })
+
   it('opens the palette from the canvas', async () => {
     // somewhere on the empty canvas, wherever the example leaves room
     const at = await app.page.evaluate(() => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canConnect, compatiblePort, resolveGenTypes, type Graph } from './index'
+import { canConnect, compatiblePort, insertPorts, resolveGenTypes, type Graph } from './index'
 
 function graphOf(types: Record<string, string>, wires: [string, string, string, string][]): Graph {
   const nodes: Graph['nodes'] = {}
@@ -71,5 +71,22 @@ describe('compatiblePort', () => {
     expect(compatiblePort(g, { direction: 'to', nodeId: 'out', port: 'color' }, 'color')).toBe('color')
     expect(compatiblePort(g, { direction: 'to', nodeId: 'out', port: 'color' }, 'uv')).toBeNull()
     expect(compatiblePort(g, { direction: 'to', nodeId: 'out', port: 'color' }, 'sin')).toBe('result')
+  })
+})
+
+describe('insertPorts', () => {
+  const g = graphOf({ time: 'time', sin: 'sin', col: 'color', out: 'output' }, [
+    ['time', 'time', 'sin', 'x'],
+    ['col', 'color', 'out', 'color'],
+  ])
+
+  it('finds the input and output a node in the middle of a wire would use', () => {
+    expect(insertPorts(g, 'e0', 'multiply')).toEqual({ input: 'a', output: 'result' })
+    expect(insertPorts(g, 'e1', 'sin')).toEqual({ input: 'x', output: 'result' })
+  })
+
+  it('refuses nodes that take nothing, and unknown wires', () => {
+    expect(insertPorts(g, 'e0', 'time')).toBeNull()
+    expect(insertPorts(g, 'nope', 'multiply')).toBeNull()
   })
 })

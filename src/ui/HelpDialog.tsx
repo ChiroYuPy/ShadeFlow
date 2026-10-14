@@ -24,6 +24,7 @@ const SECTIONS: { title: string; items: Gesture[] }[] = [
       { keys: ['Right-click a node, a wire or the canvas'], does: 'Open its menu: duplicate, copy, delete, fold…' },
       { keys: ['Drop a wire on empty space'], does: 'Add a node that fits, already connected' },
       { keys: ['Drag a wire end'], does: 'Move it to another port, or drop it on empty space to remove it' },
+      { keys: ['Right-click a wire'], does: 'Insert a node in its middle, already connected on both sides' },
       { keys: ['Eye icon in a node header'], does: 'Show or hide that node\'s live preview (hidden by default)' },
       { keys: ['Arrow in a node header'], does: 'Fold the node: only the plugs in use stay visible' },
       { keys: ['Click a node output name'], does: 'Choose which output the node previews' },

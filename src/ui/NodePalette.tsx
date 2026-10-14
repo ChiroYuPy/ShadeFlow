@@ -1,10 +1,10 @@
 import { createElement, useDeferredValue, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { ChevronDown, Search } from 'lucide-react'
-import { compatiblePort, listNodeDefs, NOTE_TYPE, type NodeDef } from '@/core'
+import { compatiblePort, insertPorts, listNodeDefs, NOTE_TYPE, type NodeDef } from '@/core'
 import { CATEGORY_LABELS, CATEGORY_TEXT, nodeIcon } from '@/editor/nodeLook'
 import { cn } from '@/lib/utils'
-import { useGraphStore } from '@/store/graphStore'
+import { beginGesture, endGesture, useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
 import { SLIDE } from './motion'
 import { NodeDetails } from './NodeDetails'
@@ -79,7 +79,9 @@ const close = () => useUIStore.getState().closePalette()
 
 /** Search and the list. Mounted each time the palette opens, so it starts afresh. */
 function PaletteBody() {
-  const { at, anchor } = useUIStore((s) => s.palette)
+  const { at, anchor, insert } = useUIStore((s) => s.palette)
+  // Only nodes that fit are offered: to a dropped wire, or in the middle of a wire.
+  const fitting = anchor !== null || insert !== null
   const graph = useGraphStore((s) => s.graph)
   const { screenToFlowPosition } = useReactFlow()
 
@@ -89,16 +91,21 @@ function PaletteBody() {
   const [info, setInfo] = useState<string | null>(null)
   const list = useRef<HTMLDivElement>(null)
 
-  // Dropped wire: only offer nodes that can be wired to it.
   const offered = useMemo(
-    () => listNodeDefs().filter((def) => def.category !== 'output' && (!anchor || compatiblePort(graph, anchor, def.type) !== null)),
-    [anchor, graph],
+    () =>
+      listNodeDefs().filter(
+        (def) =>
+          def.category !== 'output' &&
+          (!anchor || compatiblePort(graph, anchor, def.type) !== null) &&
+          (!insert || insertPorts(graph, insert, def.type) !== null),
+      ),
+    [anchor, insert, graph],
   )
 
   const found = useMemo<Section[]>(() => {
     // Searching: a single list, best match first.
     if (search.trim() !== '') {
-      const candidates = [...offered.map((d) => entryOf(d)), ...(anchor ? [] : [NOTE])]
+      const candidates = [...offered.map((d) => entryOf(d)), ...(fitting ? [] : [NOTE])]
       const found = candidates
         .map((entry) => ({ entry, score: matchScore(entry, search) }))
         .filter((s) => s.score > 0)
@@ -114,9 +121,9 @@ function PaletteBody() {
     for (const c of new Set(offered.map((d) => d.category))) {
       out.push({ heading: CATEGORY_LABELS[c], tint: CATEGORY_TEXT[c], entries: offered.filter((d) => d.category === c).map((d) => entryOf(d)) })
     }
-    if (!anchor) out.push({ heading: 'Annotation', entries: [NOTE] })
+    if (!fitting) out.push({ heading: 'Annotation', entries: [NOTE] })
     return out
-  }, [offered, search, anchor])
+  }, [offered, search, fitting])
 
   // The sheet comes first and starts sliding in, the list follows a moment later.
   const sections = useDeferredValue(found, NO_SECTIONS)
@@ -124,7 +131,29 @@ function PaletteBody() {
   // The highlighted line: the one last pointed at or reached with the arrows, else the first.
   const current = entries.find((e) => e.key === active) ?? entries[0]
 
+  /** Puts the node in the middle of the wire: one undo step for the node and its two wires. */
+  const insertOnWire = (edgeId: string, type: string) => {
+    const store = useGraphStore.getState()
+    const edge = store.graph.edges.find((e) => e.id === edgeId)
+    const ports = insertPorts(store.graph, edgeId, type)
+    if (!edge || !ports) return close()
+    // Where the menu was opened on the wire, else halfway between its two nodes; centered on that point.
+    const a = store.graph.nodes[edge.from.nodeId].position
+    const b = store.graph.nodes[edge.to.nodeId].position
+    const point = at ?? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+    rememberNodeType(type)
+    beginGesture()
+    store.removeEdges([edgeId])
+    const id = store.addNode(type, { x: point.x - 104, y: point.y - 20 })
+    store.connect(edge.from, { nodeId: id, port: ports.input })
+    store.connect({ nodeId: id, port: ports.output }, edge.to)
+    endGesture()
+    useUIStore.getState().setSelection([id])
+    close()
+  }
+
   const add = (type: string) => {
+    if (insert) return insertOnWire(insert, type)
     let position = at ?? screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
     const store = useGraphStore.getState()
     const port = anchor ? compatiblePort(store.graph, anchor, type) : null
@@ -182,7 +211,7 @@ function PaletteBody() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={anchor ? 'Search nodes that fit…' : 'Search nodes…'}
+            placeholder={fitting ? 'Search nodes that fit…' : 'Search nodes…'}
             aria-label="Search nodes"
             autoComplete="off"
             autoCapitalize="off"

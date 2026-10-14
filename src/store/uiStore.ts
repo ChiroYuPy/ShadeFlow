@@ -23,10 +23,12 @@ interface UIState {
   /**
    * Node palette. `at` is the flow position for the new node (viewport center when null).
    * `anchor` is set when it was opened by dropping a wire: only compatible nodes are
-   * listed and the new node gets connected.
+   * listed and the new node gets connected. `insert` is the wire the new node goes in the middle of.
    */
-  palette: { open: boolean; at: Position | null; anchor: WireAnchor | null }
+  palette: { open: boolean; at: Position | null; anchor: WireAnchor | null; insert: string | null }
   openPalette: (at?: Position, anchor?: WireAnchor) => void
+  /** Offers the nodes that can go in the middle of this wire. */
+  openPaletteOnWire: (edgeId: string, at?: Position) => void
   closePalette: () => void
 
   /** Right-click menu: where it opened (screen and flow coordinates) and what was clicked. */
@@ -98,8 +100,9 @@ export const useUIStore = create<UIState>()((set) => ({
     }),
   setSelection: (ids) => set({ selected: new Set(ids) }),
 
-  palette: { open: false, at: null, anchor: null },
-  openPalette: (at, anchor) => set({ palette: { open: true, at: at ?? null, anchor: anchor ?? null } }),
+  palette: { open: false, at: null, anchor: null, insert: null },
+  openPalette: (at, anchor) => set({ palette: { open: true, at: at ?? null, anchor: anchor ?? null, insert: null } }),
+  openPaletteOnWire: (edgeId, at) => set({ palette: { open: true, at: at ?? null, anchor: null, insert: edgeId } }),
   closePalette: () => set((s) => ({ palette: { ...s.palette, open: false } })),
 
   contextMenu: null,

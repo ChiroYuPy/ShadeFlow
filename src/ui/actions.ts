@@ -13,6 +13,7 @@ import {
   EyeOff,
   FilePlus,
   FoldVertical,
+  GitCommitHorizontal,
   Info,
   Monitor,
   Plus,
@@ -97,6 +98,15 @@ export const ACTIONS = {
     keys: [['Tab'], ['Shift', 'A']],
     run: ({ at }) => ui().openPalette(at),
   },
+  insert: {
+    label: 'Insert a node',
+    icon: GitCommitHorizontal,
+    available: (s) => s.selection.wires.length === 1 && s.selection.count === 1,
+    run: ({ at }) => {
+      const { wires } = currentSelection()
+      if (wires.length === 1) ui().openPaletteOnWire(wires[0], at)
+    },
+  },
   paste: { label: 'Paste', icon: ClipboardPaste, keys: [[MOD, 'V']], run: () => void pasteFromClipboard() },
   selectAll: { label: 'Select all', icon: BoxSelect, keys: [[MOD, 'A']], run: selectAll },
   frame: {
@@ -179,10 +189,12 @@ export const MENUS = {
    * click. The code has its own button in the bar.
    */
   project: ['newProject', 'examples', '-', 'open', 'save', '-', 'paste', 'selectAll', 'frame', '-', 'result', '-', 'help'],
+  /** Right-click on a wire. */
+  wire: ['insert', '-', 'delete'],
   /** Right-click on empty canvas. */
   pane: ['add', 'paste', '-', 'selectAll', 'frame'],
   /** What can be done with the selected nodes: the node menu, and the "more" of the selection bar. */
-  selection: ['frame', 'previews', 'fold', 'about', 'reset', '-', 'duplicate', 'copy', 'cut', '-', 'delete'],
+  selection: ['insert', 'frame', 'previews', 'fold', 'about', 'reset', '-', 'duplicate', 'copy', 'cut', '-', 'delete'],
 } satisfies Record<string, MenuEntry[]>
 
 const currentSelection = () => describeSelection(useGraphStore.getState().graph, useUIStore.getState().selected)

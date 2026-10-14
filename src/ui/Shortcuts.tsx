@@ -21,6 +21,16 @@ function isTyping(target: EventTarget | null) {
   return target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
 }
 
+/**
+ * Tab adds a node, as in most node editors, but only from the page or the canvas itself:
+ * from a button or a field it still moves the focus, so the interface stays usable by keyboard.
+ */
+function onCanvas(target: EventTarget | null) {
+  if (target === document.body) return true
+  // A clicked node or wire holds the focus; its buttons and fields keep Tab.
+  return target instanceof HTMLElement && target.closest('.react-flow') !== null && !target.closest('button, input, select, textarea, [tabindex="-1"]')
+}
+
 /** Number fields have no text history worth keeping: Ctrl+Z there undoes the graph. */
 const isNumberField = (target: EventTarget | null) => target instanceof HTMLElement && 'numberField' in target.dataset
 
@@ -62,6 +72,12 @@ export function Shortcuts() {
         return
       }
       if (inOverlay(e.target)) return
+
+      if (e.key === 'Tab' && !mod && !e.altKey && !e.shiftKey && onCanvas(e.target)) {
+        e.preventDefault()
+        ui.openPalette()
+        return
+      }
 
       if (!mod && !e.altKey && !typing) {
         if (key === 'a' && e.shiftKey) {

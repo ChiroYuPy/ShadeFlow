@@ -266,6 +266,18 @@ describe('keyboard', () => {
     expect((await app.nodeTitles()).filter((t) => t === 'Fract')).toHaveLength(2)
   })
 
+  it('opens the palette with Tab: type, Enter, the node is there', async () => {
+    await app.clickNode('Fract') // a node holds the focus
+    await app.page.keyboard.press('Tab')
+    await app.page.waitForSelector('[data-palette]')
+    await app.sleep(250)
+    await app.page.keyboard.type('voronoi')
+    await app.sleep(150)
+    await app.page.keyboard.press('Enter')
+    await app.sleep(300)
+    expect(await app.nodeTitles()).toContain('Voronoi')
+  })
+
   it('moves the highlight with the arrows and adds with Enter', async () => {
     await app.openPalette()
     await app.page.keyboard.type('co')

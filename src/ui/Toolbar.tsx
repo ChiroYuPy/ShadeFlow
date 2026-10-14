@@ -158,7 +158,7 @@ function ProjectBar() {
         <Redo2 />
       </Tool>
       <Divider />
-      <Tool label="Add a node" shortcut="Ctrl+K" onClick={() => useUIStore.getState().openPalette()}>
+      <Tool label="Add a node" shortcut="Tab or Ctrl+K" onClick={() => useUIStore.getState().openPalette()}>
         <Plus />
       </Tool>
     </div>

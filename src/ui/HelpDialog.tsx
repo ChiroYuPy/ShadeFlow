@@ -16,7 +16,7 @@ const SECTIONS: { title: string; items: Gesture[] }[] = [
   {
     title: 'Build',
     items: [
-      { keys: [MOD, 'K'], or: [['Shift', 'A'], ['Double-click the canvas']], does: 'Add a node, where the pointer is' },
+      { keys: ['Tab'], or: [[MOD, 'K'], ['Shift', 'A'], ['Double-click the canvas']], does: 'Add a node where the pointer is: type its name, then Enter' },
       { keys: ['Right-click a node, a wire or the canvas'], does: 'Open its menu: duplicate, copy, delete, fold…' },
       { keys: ['Drop a wire on empty space'], does: 'Add a node that fits, already connected' },
       { keys: ['Drag a wire end'], does: 'Move it to another port, or drop it on empty space to remove it' },

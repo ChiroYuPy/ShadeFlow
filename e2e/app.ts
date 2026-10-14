@@ -154,7 +154,7 @@ export class App {
   }
 
   async openPalette() {
-    await this.key('k', ['Control'])
+    await this.key('A', ['Shift'])
     await this.page.waitForSelector('[data-palette]')
     await sleep(250)
   }

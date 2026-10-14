@@ -1,7 +1,7 @@
 import { EXAMPLES, type Example } from '@/demo/examples'
 import { NodePreview } from '@/editor/NodePreview'
 import { previewHub } from '@/render/previewHub'
-import { confirmReplace, loadGraph } from '@/store/fileActions'
+import { loadGraph } from '@/store/fileActions'
 import { useUIStore } from '@/store/uiStore'
 import { Overlay, OverlayHeader } from './Overlay'
 
@@ -41,8 +41,7 @@ export default function ExamplesPanel() {
               example={example}
               onOpen={() => {
                 close()
-                // Asks first when there is something to lose.
-                confirmReplace(`Open the “${example.name}” example?`, () => loadGraph(example.graph))
+                loadGraph(example.graph, `Opened the “${example.name}” example.`)
               }}
             />
           ))}

@@ -80,8 +80,7 @@ export function Shortcuts() {
         if (key === 'a' && e.shiftKey) {
           e.preventDefault()
           addHere()
-        } else if (key === 'v') ui.setTool(ui.tool === 'select' ? 'pan' : 'select')
-        else if (e.key === '+' || e.key === '=') void zoomIn({ duration: 150 })
+        } else if (e.key === '+' || e.key === '=') void zoomIn({ duration: 150 })
         else if (e.key === '-') void zoomOut({ duration: 150 })
         else if (Object.hasOwn(KEYS, key)) run(KEYS[key])
         return
@@ -90,10 +89,7 @@ export function Shortcuts() {
 
       // Leaving the field drops its typed draft, so it shows the restored value after an undo.
       if (isNumberField(e.target) && (key === 'z' || key === 'y')) (e.target as HTMLElement).blur()
-      if (key === 'k') {
-        e.preventDefault()
-        addHere()
-      } else if (key === 's') {
+      if (key === 's') {
         e.preventDefault() // the browser would save the page
         run('save')
       } else if (key === 'o') {

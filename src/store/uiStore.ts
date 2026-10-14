@@ -34,7 +34,7 @@ interface UIState {
   openContextMenu: (menu: NonNullable<UIState['contextMenu']>) => void
   closeContextMenu: () => void
 
-  /** What dragging the empty canvas does: move the view, or draw a selection rectangle. */
+  /** What dragging the empty canvas does: move the view, or (armed for one drag, on touch) draw a selection rectangle. */
   tool: 'pan' | 'select'
   setTool: (tool: 'pan' | 'select') => void
 
@@ -69,13 +69,14 @@ interface UIState {
   examplesOpen: boolean
   setExamplesOpen: (open: boolean) => void
 
-  /** A short message shown to the user (import errors…). */
-  notice: string | null
-  setNotice: (message: string | null) => void
+  /** A short message shown to the user (import errors, a replaced project…), with maybe one action. */
+  notice: Notice | null
+  setNotice: (message: string | null, action?: Notice['action']) => void
+}
 
-  /** A question to answer before doing something that replaces the project. */
-  confirmation: { message: string; confirmLabel: string; run: () => void } | null
-  setConfirmation: (confirmation: UIState['confirmation']) => void
+export interface Notice {
+  message: string
+  action?: { label: string; run: () => void }
 }
 
 export const useUIStore = create<UIState>()((set) => ({
@@ -134,8 +135,5 @@ export const useUIStore = create<UIState>()((set) => ({
   setExamplesOpen: (open) => set({ examplesOpen: open }),
 
   notice: null,
-  setNotice: (message) => set({ notice: message }),
-
-  confirmation: null,
-  setConfirmation: (confirmation) => set({ confirmation }),
+  setNotice: (message, action) => set({ notice: message === null ? null : { message, action } }),
 }))

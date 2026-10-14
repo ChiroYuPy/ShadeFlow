@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { compileGraph, generateGLSL } from '@/core'
+import { Button } from '@/components/ui/button'
 import { Editor } from '@/editor/Editor'
 import type { ShaderStatus } from '@/render/ShaderRenderer'
 import { useGraphStore } from '@/store/graphStore'
@@ -9,7 +10,6 @@ import { previewHub } from '@/render/previewHub'
 import { SLIDE_MS } from '@/ui/motion'
 import { Presence } from '@/ui/Presence'
 import { Preview } from '@/ui/Preview'
-import { ConfirmDialog } from '@/ui/ConfirmDialog'
 import { ContextMenu } from '@/ui/ContextMenu'
 import { Shortcuts } from '@/ui/Shortcuts'
 import { Toolbar } from '@/ui/Toolbar'
@@ -45,7 +45,8 @@ function App() {
 
   useEffect(() => {
     if (!notice) return
-    const t = setTimeout(() => useUIStore.getState().setNotice(null), 4000)
+    // A notice with an action stays long enough to reach it.
+    const t = setTimeout(() => useUIStore.getState().setNotice(null), notice.action ? 8000 : 4000)
     return () => clearTimeout(t)
   }, [notice])
 
@@ -65,7 +66,6 @@ function App() {
         <Shortcuts />
         <Toolbar />
         <ContextMenu />
-        <ConfirmDialog />
         <NodePalette />
         <ExamplesPanel />
       </ReactFlowProvider>
@@ -94,9 +94,24 @@ function App() {
       <Presence
         show={notice !== null}
         from="bottom"
-        className="panel absolute bottom-20 left-1/2 -translate-x-1/2 px-3 py-2 text-sm"
+        role="status"
+        data-notice=""
+        className="panel absolute bottom-20 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-3 px-3 py-2 text-sm"
       >
-        {shownNotice}
+        <span>{shownNotice?.message}</span>
+        {shownNotice?.action && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-my-1 -mr-2 text-selection"
+            onClick={() => {
+              shownNotice.action?.run()
+              useUIStore.getState().setNotice(null)
+            }}
+          >
+            {shownNotice.action.label}
+          </Button>
+        )}
       </Presence>
     </div>
   )

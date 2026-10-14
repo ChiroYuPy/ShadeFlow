@@ -241,13 +241,13 @@ export function Editor({ errors }: EditorProps) {
       }}
       deleteKeyCode={['Backspace', 'Delete']}
       zoomOnDoubleClick={false}
-      // Select tool: dragging draws a rectangle and the view moves with two fingers
-      // (React Flow only starts a touch selection when one-finger panning is off).
+      // A mouse draws a rectangle with Shift. A finger has no Shift: the selection bar arms the
+      // rectangle for one drag (React Flow only starts a touch selection when one-finger panning is
+      // off), then the finger moves the view again.
       selectionOnDrag={selectTool}
       panOnDrag={!selectTool}
-      // On a touch screen the rectangle is armed for one drag (selection bar): then the finger moves the view again.
       onSelectionEnd={() => {
-        if (selectTool && window.matchMedia('(pointer: coarse)').matches) useUIStore.getState().setTool('pan')
+        if (selectTool) useUIStore.getState().setTool('pan')
       }}
       selectionMode={SelectionMode.Partial}
       onConnectEnd={onConnectEnd}

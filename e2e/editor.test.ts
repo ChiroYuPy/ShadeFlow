@@ -57,33 +57,25 @@ describe('replacing the project', () => {
     await app.clickMenuItem(item)
     await app.sleep(300)
   }
-  const press = (label: string) =>
-    app.page.evaluate((l) => ([...document.querySelectorAll('[role=dialog] button')].find((b) => b.textContent === l) as HTMLElement | undefined)?.click(), label)
+  const notice = () => app.page.$eval('[data-notice]', (e) => e.textContent ?? '').catch(() => null)
 
-  it('asks before a new project, and keeps the project when cancelled', async () => {
+  it('replaces at once, and offers to undo it', async () => {
     const before = await app.nodeCount()
-    await choose('New project')
-    expect(await app.page.$('[role=dialog]')).not.toBeNull()
-    await press('Cancel')
-    await app.sleep(300)
-    expect(await app.nodeCount()).toBe(before)
-
-    await choose('New project')
-    await press('Replace')
-    await app.sleep(400)
-    expect(await app.nodeCount()).toBe(1)
-    // an empty project has nothing to lose: no question
     await choose('New project')
     expect(await app.page.$('[role=dialog]')).toBeNull()
+    expect(await app.nodeCount()).toBe(1)
+    expect(await notice()).toContain('Undo')
+    await app.page.click('[data-notice] button')
+    await app.sleep(300)
+    expect(await app.nodeCount()).toBe(before)
   })
 
-  it('can be undone after confirming', async () => {
-    const before = await app.nodeCount()
+  it('says nothing when there was nothing to lose', async () => {
     await choose('New project')
-    await press('Replace')
-    await app.sleep(400)
-    await app.key('z', ['Control'])
-    expect(await app.nodeCount()).toBe(before)
+    await app.sleep(500)
+    await choose('New project')
+    await app.sleep(300) // the first notice slides away
+    expect(await notice()).toBeNull()
   })
 })
 
@@ -125,9 +117,6 @@ describe('examples', () => {
   it.each(EXAMPLES.map((e) => [e.name, e.id]))('"%s" loads and displays', async (_name, id) => {
     await openExamples()
     await app.page.$eval(`[data-example="${id}"]`, (card) => (card as HTMLElement).click())
-    await app.sleep(500)
-    await app.page.waitForSelector('[role=dialog]')
-    await app.page.evaluate(() => ([...document.querySelectorAll('[role=dialog] button')].find((b) => b.textContent === 'Replace') as HTMLElement | undefined)?.click())
     await app.sleep(1200)
     expect(await app.page.evaluate(() => document.body.textContent)).not.toContain('Cannot display')
     expect(await app.nodeTitles()).toContain('Output')
@@ -552,15 +541,6 @@ describe('view', () => {
     await app.key('f')
     await app.sleep(500)
     expect(await zoomLevel()).toBeCloseTo(all, 2)
-  })
-
-  it('switches between the move and select tools with V', async () => {
-    const pannable = () => app.page.$eval('.react-flow__pane', (p) => p.classList.contains('draggable'))
-    expect(await pannable()).toBe(true)
-    await app.key('v')
-    expect(await pannable()).toBe(false)
-    await app.key('v')
-    expect(await pannable()).toBe(true)
   })
 
   it('has a key for every panel and for zooming', async () => {

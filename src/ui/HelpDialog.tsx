@@ -43,7 +43,6 @@ const SECTIONS: { title: string; items: Gesture[] }[] = [
     items: [
       { keys: [MOD, 'Click'], does: 'Add a node to the selection' },
       { keys: ['Shift', 'Drag'], does: 'Select with a rectangle' },
-      { keys: ['V'], does: 'Switch between moving the view (the default) and drawing a rectangle when dragging the background' },
       key('previews', 'Show or hide the previews of the selected nodes'),
       key('fold', 'Fold or unfold the selected nodes'),
       { keys: ['Touch: dashed square in the selection bar'], does: 'Draw one rectangle with your finger to select an area' },

@@ -11,29 +11,31 @@ import {
   type GraphFragment,
 } from '@/core'
 import { getNodeDef, NOTE_TYPE, type GraphNode } from '@/core'
-import { beginGesture, endGesture, useGraphStore } from './graphStore'
+import { beginGesture, endGesture, undo, useGraphStore } from './graphStore'
 import { useUIStore } from './uiStore'
 
 /**
- * Run an action that replaces the whole project. When there is something to lose
- * (more than the Output node), ask first; the replacement is undoable anyway.
+ * Replace the whole project, then bring it into view. Nothing is asked first: when there was
+ * something to lose (more than the Output node), a notice says what happened and offers to undo it.
  */
-export function confirmReplace(what: string, run: () => void) {
-  if (Object.keys(useGraphStore.getState().graph.nodes).length <= 1) return run()
-  useUIStore.getState().setConfirmation({
-    message: `${what} The current project will be replaced (Ctrl+Z brings it back).`,
-    confirmLabel: 'Replace',
-    run,
+export function loadGraph(graph: Graph, done: string) {
+  const store = useGraphStore.getState()
+  const worth = Object.keys(store.graph.nodes).length > 1
+  store.replaceGraph(graph)
+  const ui = useUIStore.getState()
+  ui.requestFit()
+  if (!worth) return ui.setNotice(null)
+  const replaced = useGraphStore.getState().graph
+  ui.setNotice(done, {
+    label: 'Undo',
+    // Only while nothing else has changed: later, Undo would undo something else.
+    run: () => {
+      if (useGraphStore.getState().graph === replaced) undo()
+    },
   })
 }
 
-/** Replace the whole project, then bring it into view. */
-export function loadGraph(graph: Graph) {
-  useGraphStore.getState().replaceGraph(graph)
-  useUIStore.getState().requestFit()
-}
-
-export const newProject = () => loadGraph(newGraph())
+export const newProject = () => loadGraph(newGraph(), 'Started a new project.')
 
 export function saveProjectFile() {
   const blob = new Blob([serializeProject(useGraphStore.getState().graph)], { type: 'application/json' })
@@ -47,24 +49,22 @@ export function saveProjectFile() {
 
 export async function openProjectFile(file: File) {
   try {
-    loadGraph(parseProject(await file.text()))
+    loadGraph(parseProject(await file.text()), `Opened ${file.name}.`)
   } catch (e) {
     useUIStore.getState().setNotice(e instanceof Error ? e.message : 'Could not open this file')
   }
 }
 
-/** Asks first if needed, then lets the user pick a project file and opens it. */
+/** Lets the user pick a project file and opens it. */
 export function chooseProjectFile() {
-  confirmReplace('Open a project file?', () => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json,application/json'
-    input.onchange = () => {
-      const file = input.files?.[0]
-      if (file) void openProjectFile(file)
-    }
-    input.click()
-  })
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.json,application/json'
+  input.onchange = () => {
+    const file = input.files?.[0]
+    if (file) void openProjectFile(file)
+  }
+  input.click()
 }
 
 /** Delete the selected nodes and wires (the Output node is kept). */

@@ -29,7 +29,6 @@ import {
 } from 'lucide-react'
 import {
   chooseProjectFile,
-  confirmReplace,
   copyToClipboard,
   cutToClipboard,
   deleteSelection,
@@ -95,7 +94,7 @@ export const ACTIONS = {
   add: {
     label: 'Add a node',
     icon: Plus,
-    keys: [['Tab'], ['Shift', 'A'], [MOD, 'K']],
+    keys: [['Tab'], ['Shift', 'A']],
     run: ({ at }) => ui().openPalette(at),
   },
   paste: { label: 'Paste', icon: ClipboardPaste, keys: [[MOD, 'V']], run: () => void pasteFromClipboard() },
@@ -163,7 +162,7 @@ export const ACTIONS = {
   code: { label: 'Generated code', icon: Code, keys: [['C']], checked: (s) => s.codeOpen, run: () => ui().toggleCode() },
   help: { label: 'Help and shortcuts', icon: CircleHelp, keys: [['?']], run: () => ui().setHelpOpen(true) },
 
-  newProject: { label: 'New project', icon: FilePlus, run: () => confirmReplace('Start a new project?', newProject) },
+  newProject: { label: 'New project', icon: FilePlus, run: newProject },
   examples: { label: 'Examples…', icon: BookOpen, run: () => ui().setExamplesOpen(true) },
   open: { label: 'Open file…', icon: Upload, keys: [[MOD, 'O']], run: chooseProjectFile },
   save: { label: 'Save to file', icon: Download, keys: [[MOD, 'S']], run: saveProjectFile },

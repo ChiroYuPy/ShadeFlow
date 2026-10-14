@@ -2,6 +2,7 @@ import type { IRBuilder } from '../ir/builder'
 import type { ValueId } from '../ir/ir'
 import type { OpName } from '../ir/ops'
 import type { InputPortDef, NodeCategory, NodeDef } from './definition'
+import { DEFAULT_RAMP, readRamp } from './ramp'
 
 const gen = (name: string, label: string, value: number): InputPortDef => ({
   name,
@@ -672,6 +673,32 @@ export const BUILTIN_NODES: NodeDef[] = [
       const rgb = b.op('clamp', [triangle, v3(0), v3(1)])
       const tinted = b.op('mix', [v3(1), rgb, b.convert(inputs.saturation, 'vec3')])
       return { color: b.op('mul', [tinted, b.convert(inputs.value, 'vec3')]) }
+    },
+  },
+  {
+    type: 'color-ramp',
+    label: 'Color Ramp',
+    description:
+      'Turns a number into a color along a gradient you draw: T = 0 takes the color on the left, 1 the one on the right, and between two stops the color blends from one to the other. Click the bar to add a stop, drag a stop to move it. Unwired, T is the UV\'s X, so the node shows its gradient.',
+    category: 'color',
+    inputs: [
+      { name: 't', label: 'T', type: 'float', default: 'uv' },
+      { name: 'stops', label: 'Colors', type: 'vec3', default: DEFAULT_RAMP, connectable: false, widget: 'ramp' },
+    ],
+    outputs: [{ name: 'color', label: 'Color', type: 'vec3' }],
+    lower: ({ b, node, inputs }) => {
+      const stops = readRamp(node.values.stops)
+      const rgb = (c: number[]) => b.constant('vec3', c)
+      // Start from the first color, then blend toward each next one as T crosses the gap to it.
+      let color = rgb(stops[0].color)
+      for (let i = 1; i < stops.length; i++) {
+        const from = stops[i - 1].position
+        const width = Math.max(stops[i].position - from, 1e-5)
+        const progress = b.op('mul', [b.op('sub', [inputs.t, b.constant('float', [from])]), b.constant('float', [1 / width])])
+        const f = b.op('clamp', [progress, b.constant('float', [0]), b.constant('float', [1])])
+        color = b.op('mix', [color, rgb(stops[i].color), b.convert(f, 'vec3')])
+      }
+      return { color }
     },
   },
   {

@@ -272,6 +272,19 @@ describe('what nodes compute', () => {
     close(vectors('normalize', 'result'), [0.6, 0.8, 0])
   })
 
+  it('Color Ramp blends between its stops, in order, and reads UV x when T is unwired', () => {
+    const stops = [1, 0, 0, 1, 0, 1, 0, 0, 0.5, 0, 1, 0] // blue at 1, red at 0, green at 0.5: stored unsorted
+    close(run('color-ramp', { stops }, { uv: [0, 0] }), [1, 0, 0])
+    close(run('color-ramp', { stops }, { uv: [0.25, 0] }), [0.5, 0.5, 0])
+    close(run('color-ramp', { stops }, { uv: [0.5, 0] }), [0, 1, 0])
+    close(run('color-ramp', { stops }, { uv: [1, 0] }), [0, 0, 1])
+    // outside 0…1, the end colors
+    close(run('color-ramp', { stops }, { uv: [-1, 0] }), [1, 0, 0])
+    close(run('color-ramp', { stops }, { uv: [3, 0] }), [0, 0, 1])
+    // no stops stored: black to white
+    close(run('color-ramp', {}, { uv: [0.5, 0] }), [0.5, 0.5, 0.5])
+  })
+
   it('Tiling and Offset scales then moves', () => {
     close(run('tiling-offset', { tiling: [2, 3], offset: [0.5, 0] }, { uv: [0.25, 0.5] }, 'position'), [1, 1.5])
   })

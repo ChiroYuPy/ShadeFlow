@@ -22,13 +22,17 @@ export interface InputPortDef {
   type: PortType
   /**
    * Value used when the port has no wire. A single number is splatted to vectors.
-   * `'uv'`: the pixel's UV instead of a value to edit (positions: the node works on its own).
+   * `'uv'`: the pixel's UV instead of a value to edit (positions: the node works on its own);
+   * a float input takes its X, a horizontal 0…1 gradient.
    */
   default: number[] | 'uv'
   /** `false` = a plain parameter shown on the node, no handle to wire. */
   connectable?: boolean
-  /** Hint for the UI on how to edit the value. */
-  widget?: 'color'
+  /**
+   * Hint for the UI on how to edit the value. `'ramp'`: the stops of a Color Ramp (see `ramp.ts`),
+   * a parameter of any length that the node's `lower` reads itself.
+   */
+  widget?: 'color' | 'ramp'
   /** The value is a whole number within these bounds (a count the compiler unrolls). */
   whole?: { min: number; max: number }
 }

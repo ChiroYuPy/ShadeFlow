@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { editValue, useGraphStore } from '@/store/graphStore'
 import { NodePreview } from './NodePreview'
 import { CATEGORY_TEXT, nodeIcon } from './nodeLook'
+import { RampField } from './RampField'
 import { PortValue } from './ValueFields'
 
 type NodeData = {
@@ -133,6 +134,17 @@ function ShadeNodeImpl({ id, data, selected }: NodeProps<ShadeFlowNode>) {
           // Folded nodes keep only the plugs that are in use.
           if (data.collapsed && !wired) return null
 
+          // A Color Ramp's gradient takes the whole width, below its label.
+          if (port.widget === 'ramp') {
+            return (
+              <RampField
+                key={port.name}
+                value={data.values[port.name] ?? (port.default as number[])}
+                onChange={(v) => editValue(id, port.name, v)}
+              />
+            )
+          }
+
           // Unwired, a position is the pixel's UV: nothing to edit, the row just says so.
           const usesUV = port.default === 'uv' && !wired
           const editable = port.default !== 'uv' && (!connectable || !wired)
@@ -146,7 +158,7 @@ function ShadeNodeImpl({ id, data, selected }: NodeProps<ShadeFlowNode>) {
               <span className="shrink-0 text-muted-foreground">{port.label}</span>
               {usesUV && (
                 <span className="ml-auto text-xs text-muted-foreground" title="Nothing is wired in: the pixel's UV is used">
-                  UV
+                  {type === 'float' ? 'UV x' : 'UV'}
                 </span>
               )}
               {editable && port.default !== 'uv' && (

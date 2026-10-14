@@ -144,12 +144,15 @@ function lower(graph: Graph, options: CompileOptions, diagnostics: Diagnostic[])
     // 3. Convert wired values / fill defaults for every input.
     const inputs: Record<string, ValueId> = {}
     for (const port of def.inputs) {
+      if (port.widget === 'ramp') continue
       const target = port.type === 'gen' ? genType : port.type
       const id = wired[port.name]
       if (id === undefined) {
         inputs[port.name] =
           port.default === 'uv'
-            ? b.convert(b.input('uv'), target)
+            ? target === 'float'
+              ? b.swizzle(b.input('uv'), 'x')
+              : b.convert(b.input('uv'), target)
             : b.constant(target, coerceConstant(node.values[port.name] ?? port.default, target))
       } else if (canConvert(b.typeOf(id), target)) {
         inputs[port.name] = b.convert(id, target)

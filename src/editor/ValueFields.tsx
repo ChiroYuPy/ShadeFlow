@@ -23,7 +23,7 @@ interface Whole {
  * A compact number field. Drag horizontally to change the value (also works with touch
  * and gives access to negative numbers on keypads without a minus sign); click to type.
  */
-function NumberField({
+export function NumberField({
   title,
   value,
   whole,
@@ -106,7 +106,7 @@ const toHex = (rgb: number[]) =>
 const fromHex = (hex: string) => [1, 3, 5].map((i) => Math.round((parseInt(hex.slice(i, i + 2), 16) / 255) * 1000) / 1000)
 
 /** Color field: hex code and swatch. The whole field opens the picker. */
-function ColorField({ value, onChange }: { value: number[]; onChange: (v: number[]) => void }) {
+export function ColorField({ value, onChange }: { value: number[]; onChange: (v: number[]) => void }) {
   const hex = toHex(value)
   return (
     <label className="nodrag nopan relative flex h-6 min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-md bg-background/70 px-1.5 text-xs">
@@ -125,7 +125,7 @@ function ColorField({ value, onChange }: { value: number[]; onChange: (v: number
 interface PortValueProps {
   type: ValueType
   value: number[]
-  widget?: 'color'
+  widget?: 'color' | 'ramp'
   whole?: Whole
   onChange: (value: number[]) => void
 }

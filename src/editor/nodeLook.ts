@@ -4,6 +4,7 @@ import {
   ArrowRightLeft,
   ArrowUpToLine,
   Bubbles,
+  SwatchBook,
   Contrast,
   Diff,
   Grid2x2,
@@ -62,6 +63,7 @@ import type { NodeCategory } from '@/core'
 /** How nodes look: one icon per node type, one color and one name per category. */
 
 const NODE_ICONS: Record<string, LucideIcon> = {
+  'color-ramp': SwatchBook,
   sqrt: Radical,
   sign: Diff,
   ceil: ArrowUpToLine,

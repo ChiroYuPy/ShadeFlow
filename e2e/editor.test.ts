@@ -425,6 +425,33 @@ describe('editing', () => {
   })
 })
 
+describe('color ramp', () => {
+  it('adds a color where the bar is clicked, moves it by dragging, and removes it', async () => {
+    await app.addNode('Color Ramp')
+    await app.sleep(300) // the palette finishes leaving
+    const stops = () => app.page.$$eval('[data-ramp-stop]', (b) => b.map((e) => e.getAttribute('aria-label')))
+    expect(await stops()).toEqual(['Color stop at 0', 'Color stop at 1'])
+
+    const bar = (await (await app.page.$('[data-ramp-bar]'))!.boundingBox())!
+    await app.page.mouse.click(bar.x + bar.width / 2, bar.y + bar.height / 2)
+    await app.sleep(100)
+    expect(await stops()).toHaveLength(3)
+
+    // drag the new stop (the selected one) to the right
+    const middle = (await (await app.page.$('[data-ramp-stop][aria-pressed=true]'))!.boundingBox())!
+    await app.page.mouse.move(middle.x + middle.width / 2, middle.y + middle.height / 2)
+    await app.page.mouse.down()
+    await app.page.mouse.move(bar.x + bar.width * 0.75, middle.y + middle.height / 2, { steps: 5 })
+    await app.page.mouse.up()
+    const moved = await stops()
+    expect(Number(moved[1]!.replace('Color stop at ', ''))).toBeCloseTo(0.75, 1)
+
+    await app.page.click('button[aria-label="Remove this color"]')
+    await app.sleep(100)
+    expect(await stops()).toHaveLength(2)
+  })
+})
+
 describe('view', () => {
   it('frames the selection with F, or everything when nothing is selected', async () => {
     await app.key('f')

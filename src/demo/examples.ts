@@ -385,6 +385,37 @@ const confetti = graphOf(
   ],
 )
 
+/** Cells: Voronoi gives every cell its own value, and how far the pixel is from its middle. */
+const cells = graphOf(
+  {
+    n1: note(0, -190, 'Tiling and Offset slides the space: its Offset is a Vec2 whose X grows with Time, so the whole pattern drifts to the left.'),
+    n2: note(780, -190, 'Voronoi cuts the space into cells around scattered points. Cell is a random value per cell, Distance how far the pixel is from its point.'),
+    n3: note(1300, -190, 'Each cell gets its color from the Cosine Palette; One Minus of Distance darkens it toward the edges, so the cells look round.'),
+    c: { type: 'centered-uv', x: 0, y: 0 },
+    time: { type: 'time', x: 0, y: 300 },
+    speed: { type: 'multiply', x: 260, y: 300, values: { b: [0.15] } },
+    drift: { type: 'vec2', x: 520, y: 300 },
+    move: { type: 'tiling-offset', x: 520, y: 0 },
+    vor: { type: 'voronoi', x: 780, y: 0, values: { scale: [5] } },
+    pal: { type: 'cosine-palette', x: 1040, y: 0, values: { d: [0.1, 0.35, 0.6] } },
+    shade: { type: 'one-minus', x: 1040, y: 380 },
+    lit: { type: 'multiply', x: 1300, y: 100 },
+    out: { type: 'output', x: 1560, y: 100 },
+  },
+  [
+    'time.time > speed.a',
+    'speed.result > drift.x',
+    'c.uv > move.position',
+    'drift.vector > move.offset',
+    'move.position > vor.position',
+    'vor.cell > pal.t',
+    'vor.distance > shade.x',
+    'pal.color > lit.a',
+    'shade.result > lit.b',
+    'lit.result > out.color',
+  ],
+)
+
 /** Fisheye: bend the space first, then draw a regular pattern with it. */
 const fisheyeDots = graphOf(
   {
@@ -498,6 +529,7 @@ export const EXAMPLES: Example[] = [
   { id: 'clouds', name: 'Clouds', description: 'Animated noise', graph: withPreviews(clouds) },
   { id: 'rainbow', name: 'Rainbow', description: 'Colors from hue, saturation, value', graph: withPreviews(rainbow) },
   { id: 'polka-dots', name: 'Polka dots', description: 'Tile and circle masks', graph: withPreviews(polkaDots) },
+  { id: 'cells', name: 'Cells', description: 'Voronoi, a palette and a slow drift', graph: withPreviews(cells) },
   { id: 'confetti', name: 'Confetti', description: 'A random color for every tile', graph: withPreviews(confetti) },
   { id: 'sunburst', name: 'Sunburst', description: 'Rays from polar coordinates', graph: withPreviews(sunburst) },
   { id: 'fisheye', name: 'Fisheye', description: 'A pattern seen through a bulging lens', graph: withPreviews(fisheyeDots) },

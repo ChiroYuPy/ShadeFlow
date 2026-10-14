@@ -38,6 +38,10 @@ interface UIState {
   tool: 'pan' | 'select'
   setTool: (tool: 'pan' | 'select') => void
 
+  /** Bumped to ask the canvas to frame the whole graph once it is measured (after a project is replaced). */
+  fitRequest: number
+  requestFit: () => void
+
   /** Show the result of the shader, in the corner. */
   resultOpen: boolean
   toggleResult: () => void
@@ -103,6 +107,9 @@ export const useUIStore = create<UIState>()((set) => ({
 
   tool: 'pan',
   setTool: (tool) => set({ tool }),
+
+  fitRequest: 0,
+  requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),
 
   resultOpen: true,
   toggleResult: () => set((s) => ({ resultOpen: !s.resultOpen })),

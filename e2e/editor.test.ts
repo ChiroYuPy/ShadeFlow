@@ -363,13 +363,23 @@ describe('selection bar', () => {
     const before = await app.nodeCount()
     await app.clickNode('Fract')
     expect(await app.page.$eval('[role=toolbar][aria-label="Selection"]', (b) => b.textContent)).toContain('1 selected')
-    await app.page.click('button[aria-label^="Duplicate selection"]')
+    await app.page.click('[role=toolbar] button[aria-label^="Duplicate"]')
     await app.sleep(250)
     expect(await app.nodeCount()).toBe(before + 1)
-    await app.page.click('button[aria-label^="Delete selection"]')
+    await app.page.click('[role=toolbar] button[aria-label^="Delete"]')
     await app.sleep(450) // the bar slides away
     expect(await app.nodeCount()).toBe(before)
     expect(await bar()).toBeNull()
+  })
+
+  it('offers the whole node menu under "more"', async () => {
+    await app.clickNode('Fract')
+    await app.page.click('[role=toolbar] button[aria-label="More"]')
+    await app.page.waitForSelector('[role=menu]')
+    expect(await app.menuItems()).toEqual(
+      expect.arrayContaining([expect.stringContaining('About this node'), expect.stringContaining('Cut'), expect.stringContaining('Copy')]),
+    )
+    await app.key('Escape')
   })
 })
 

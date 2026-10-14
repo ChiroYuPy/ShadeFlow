@@ -27,13 +27,13 @@ export function confirmReplace(what: string, run: () => void) {
   })
 }
 
-export function newProject() {
-  useGraphStore.getState().replaceGraph(newGraph())
-}
-
+/** Replace the whole project, then bring it into view. */
 export function loadGraph(graph: Graph) {
   useGraphStore.getState().replaceGraph(graph)
+  useUIStore.getState().requestFit()
 }
+
+export const newProject = () => loadGraph(newGraph())
 
 export function saveProjectFile() {
   const blob = new Blob([serializeProject(useGraphStore.getState().graph)], { type: 'application/json' })
@@ -47,21 +47,21 @@ export function saveProjectFile() {
 
 export async function openProjectFile(file: File) {
   try {
-    useGraphStore.getState().replaceGraph(parseProject(await file.text()))
+    loadGraph(parseProject(await file.text()))
   } catch (e) {
     useUIStore.getState().setNotice(e instanceof Error ? e.message : 'Could not open this file')
   }
 }
 
-/** Asks first if needed, then lets the user pick a project file and opens it; `opened` runs after. */
-export function chooseProjectFile(opened: () => void) {
+/** Asks first if needed, then lets the user pick a project file and opens it. */
+export function chooseProjectFile() {
   confirmReplace('Open a project file?', () => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.json,application/json'
     input.onchange = () => {
       const file = input.files?.[0]
-      if (file) void openProjectFile(file).then(opened)
+      if (file) void openProjectFile(file)
     }
     input.click()
   })
@@ -176,6 +176,8 @@ export function describeSelection(graph: Graph, selected: ReadonlySet<string>) {
     /** Shader nodes (no notes). */
     nodes,
     previewable,
+    /** Shader nodes with a value that can be reset. */
+    withValues: nodes.filter((n) => Object.keys(n.values).length > 0),
     /** Everything selected that still exists. */
     count: all.length + wires,
     copyable: all.some((n) => n.type !== 'output'),
@@ -212,4 +214,10 @@ export function toggleSelectionFold() {
   asOneStep(() => {
     for (const n of nodes) if ((n.collapsed === true) !== fold) store.toggleCollapsed(n.id)
   })
+}
+
+export function resetSelectionValues() {
+  const { withValues } = currentSelection()
+  const store = useGraphStore.getState()
+  asOneStep(() => withValues.forEach((n) => store.resetValues(n.id)))
 }

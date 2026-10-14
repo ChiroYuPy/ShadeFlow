@@ -1,11 +1,9 @@
-import { useReactFlow } from '@xyflow/react'
 import { EXAMPLES, type Example } from '@/demo/examples'
 import { NodePreview } from '@/editor/NodePreview'
 import { previewHub } from '@/render/previewHub'
 import { confirmReplace, loadGraph } from '@/store/fileActions'
 import { useUIStore } from '@/store/uiStore'
 import { Overlay, OverlayHeader } from './Overlay'
-import { FIT_VIEW } from './view'
 
 const close = () => useUIStore.getState().setExamplesOpen(false)
 
@@ -30,7 +28,6 @@ function ExampleCard({ example, onOpen }: { example: Example; onOpen: () => void
 /** The examples to learn from, as cards showing a live picture of what each one draws. */
 export default function ExamplesPanel() {
   const open = useUIStore((s) => s.examplesOpen)
-  const { fitView } = useReactFlow()
 
   return (
     <Overlay open={open} onClose={close} title="Examples" data-examples="" className="sm:w-[44rem]">
@@ -45,11 +42,7 @@ export default function ExamplesPanel() {
               onOpen={() => {
                 close()
                 // Asks first when there is something to lose.
-                confirmReplace(`Open the “${example.name}” example?`, () => {
-                  loadGraph(example.graph)
-                  // The project is replaced as a whole: bring it into view once it is measured.
-                  setTimeout(() => void fitView(FIT_VIEW), 120)
-                })
+                confirmReplace(`Open the “${example.name}” example?`, () => loadGraph(example.graph))
               }}
             />
           ))}

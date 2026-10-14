@@ -1,8 +1,6 @@
 import { useUIStore } from '@/store/uiStore'
+import { keysOf, MOD, type ActionId } from './actions'
 import { Overlay, OverlayHeader } from './Overlay'
-
-const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
-const MOD = isMac ? '⌘' : 'Ctrl'
 
 interface Gesture {
   /** Keys / mouse actions, in order. */
@@ -12,17 +10,24 @@ interface Gesture {
   does: string
 }
 
+/** An action's keys, as the registry has them. */
+function key(id: ActionId, does: string, more: string[][] = []): Gesture {
+  const [keys, ...or] = keysOf(id)
+  return { keys, or: [...or, ...more], does }
+}
+
 const SECTIONS: { title: string; items: Gesture[] }[] = [
   {
     title: 'Build',
     items: [
-      { keys: ['Tab'], or: [[MOD, 'K'], ['Shift', 'A'], ['Double-click the canvas']], does: 'Add a node where the pointer is: type its name, then Enter' },
+      key('add', 'Add a node where the pointer is: type its name, then Enter', [['Double-click the canvas']]),
       { keys: ['Right-click a node, a wire or the canvas'], does: 'Open its menu: duplicate, copy, delete, fold…' },
       { keys: ['Drop a wire on empty space'], does: 'Add a node that fits, already connected' },
       { keys: ['Drag a wire end'], does: 'Move it to another port, or drop it on empty space to remove it' },
       { keys: ['Eye icon in a node header'], does: 'Show or hide that node\'s live preview (hidden by default)' },
       { keys: ['Arrow in a node header'], does: 'Fold the node: only the plugs in use stay visible' },
       { keys: ['Click a node output name'], does: 'Choose which output the node previews' },
+      key('about', 'Read what the selected node does'),
     ],
   },
   {
@@ -39,30 +44,31 @@ const SECTIONS: { title: string; items: Gesture[] }[] = [
       { keys: [MOD, 'Click'], does: 'Add a node to the selection' },
       { keys: ['Shift', 'Drag'], does: 'Select with a rectangle' },
       { keys: ['V'], does: 'Switch between moving the view (the default) and drawing a rectangle when dragging the background' },
-      { keys: ['P'], does: 'Show or hide the previews of the selected nodes' },
-      { keys: ['H'], does: 'Fold or unfold the selected nodes' },
+      key('previews', 'Show or hide the previews of the selected nodes'),
+      key('fold', 'Fold or unfold the selected nodes'),
       { keys: ['Touch: dashed square in the selection bar'], does: 'Draw one rectangle with your finger to select an area' },
+      { keys: ['Touch: ⋯ in the selection bar'], does: 'Everything the right-click menu of a node offers' },
       { keys: [MOD, 'C / X / V'], does: 'Copy, cut and paste (also between tabs)' },
-      { keys: [MOD, 'A'], does: 'Select every node' },
-      { keys: [MOD, 'D'], does: 'Duplicate the selection' },
-      { keys: ['Delete'], does: 'Remove the selection' },
-      { keys: ['Esc'], does: 'Leave a field, then drop the selection' },
+      key('selectAll', 'Select every node'),
+      key('duplicate', 'Duplicate the selection'),
+      key('delete', 'Remove the selection'),
+      key('deselect', 'Leave a field, then drop the selection'),
     ],
   },
   {
     title: 'History and view',
     items: [
-      { keys: [MOD, 'Z'], does: 'Undo' },
-      { keys: [MOD, 'Shift', 'Z'], does: 'Redo' },
+      key('undo', 'Undo'),
+      key('redo', 'Redo'),
       { keys: ['Scroll'], or: [['+', '−']], does: 'Zoom' },
-      { keys: ['F'], does: 'Frame the selection, or the whole graph when nothing is selected' },
-      { keys: ['R'], does: 'Show or hide the result' },
-      { keys: ['C'], does: 'Show or hide the generated code' },
-      { keys: [MOD, 'S'], does: 'Save the project to a file' },
-      { keys: [MOD, 'O'], does: 'Open a project file' },
+      key('frame', 'Frame the selection, or the whole graph when nothing is selected'),
+      key('result', 'Show or hide the result'),
+      key('code', 'Show or hide the generated code'),
+      key('save', 'Save the project to a file'),
+      key('open', 'Open a project file'),
       { keys: ['Drag the background'], does: 'Move around' },
       { keys: ['Touch: tap a node first'], does: 'Its fields, buttons and position only react once it is selected, so panning and pinching never change anything by accident' },
-      { keys: ['?'], does: 'Show this help' },
+      key('help', 'Show this help'),
     ],
   },
 ]

@@ -1,93 +1,20 @@
-import { useMemo, type ComponentProps } from 'react'
-import { useReactFlow } from '@xyflow/react'
-import { useStore } from 'zustand'
-import {
-  BookOpen,
-  Check,
-  CircleHelp,
-  Code,
-  Copy,
-  CopyPlus,
-  Download,
-  Eye,
-  EyeOff,
-  FilePlus,
-  FoldVertical,
-  Menu,
-  Monitor,
-  Plus,
-  Redo2,
-  Scan,
-  SquareDashedMousePointer,
-  Trash2,
-  Undo2,
-  UnfoldVertical,
-  Upload,
-  X,
-} from 'lucide-react'
+import { Ellipsis, Menu, SquareDashedMousePointer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import {
-  chooseProjectFile,
-  confirmReplace,
-  copyToClipboard,
-  deleteSelection,
-  describeSelection,
-  duplicateSelection,
-  newProject,
-  saveProjectFile,
-  toggleSelectionFold,
-  toggleSelectionPreviews,
-} from '@/store/fileActions'
-import { redo, undo, useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
+import { ActionButton, ActionMenuItems } from './ActionItems'
+import { MENUS, useActionEnv, useActionState, type ActionState } from './actions'
 import { Presence } from './Presence'
 import { useLast } from './useLast'
-import { FIT_VIEW, useFit, useFrameLabel } from './view'
 
 const BAR = 'panel absolute flex items-center gap-1 p-1'
 
-/** An icon button; `shortcut` is shown in its tooltip. */
-function Tool({ label, shortcut, active, ...props }: ComponentProps<typeof Button> & { label: string; shortcut?: string; active?: boolean }) {
-  const title = shortcut ? `${label} (${shortcut})` : label
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      aria-label={title}
-      title={title}
-      aria-pressed={active}
-      {...props}
-      className={cn(active && 'bg-selection/15 text-selection', props.className)}
-    />
-  )
-}
-
 const Divider = ({ className }: { className?: string }) => <span className={cn('mx-1 h-5 w-px bg-border', className)} />
 
-const Shortcut = ({ children }: { children: string }) => <span className="ml-auto pl-4 text-xs text-muted-foreground">{children}</span>
-
-
-/** Top left: the project (new, examples, files, panels, help), the history, and adding a node. */
-function ProjectBar() {
-  const { fitView } = useReactFlow()
-  const canUndo = useStore(useGraphStore.temporal, (s) => s.pastStates.length > 0)
-  const canRedo = useStore(useGraphStore.temporal, (s) => s.futureStates.length > 0)
-  const codeOpen = useUIStore((s) => s.codeOpen)
-  const resultOpen = useUIStore((s) => s.resultOpen)
-
-  // A new project replaces the whole graph: bring it into view once it is measured.
-  const fitSoon = () => setTimeout(() => void fitView(FIT_VIEW), 120)
-  const fit = useFit()
-  const frameLabel = useFrameLabel()
-
+/** Top left: the project menu (files, examples, panels, help), the history, and adding a node. */
+function ProjectBar({ state }: { state: ActionState }) {
+  const env = useActionEnv()
   return (
     <div className={cn(BAR, 'top-3 left-3 sm:top-4 sm:left-4')}>
       <DropdownMenu>
@@ -96,134 +23,74 @@ function ProjectBar() {
             <Menu />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" side="bottom" className="min-w-48">
-          <DropdownMenuItem
-            onSelect={() =>
-              confirmReplace('Start a new project?', () => {
-                newProject()
-                fitSoon()
-              })
-            }
-          >
-            <FilePlus /> New project
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => useUIStore.getState().setExamplesOpen(true)}>
-            <BookOpen /> Examples…
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => chooseProjectFile(fitSoon)}>
-            <Upload /> Open file…
-            <Shortcut>Ctrl+O</Shortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={saveProjectFile}>
-            <Download /> Save to file
-            <Shortcut>Ctrl+S</Shortcut>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => fit()}>
-            <Scan /> {frameLabel}
-            <Shortcut>F</Shortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => useUIStore.getState().toggleResult()}>
-            <Monitor /> Result preview
-            {resultOpen && <Check />}
-            <Shortcut>R</Shortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => useUIStore.getState().toggleCode()}>
-            <Code /> Generated code
-            {codeOpen && <Check />}
-            <Shortcut>C</Shortcut>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => useUIStore.getState().setHelpOpen(true)}>
-            <CircleHelp /> Help and shortcuts
-            <Shortcut>?</Shortcut>
-          </DropdownMenuItem>
+        <DropdownMenuContent align="start" side="bottom" className="min-w-52">
+          <ActionMenuItems items={MENUS.project} state={state} env={env} />
         </DropdownMenuContent>
       </DropdownMenu>
       <Divider />
-      <Tool label="Undo" shortcut="Ctrl+Z" disabled={!canUndo} onClick={undo}>
-        <Undo2 />
-      </Tool>
-      <Tool label="Redo" shortcut="Ctrl+Shift+Z" disabled={!canRedo} onClick={redo}>
-        <Redo2 />
-      </Tool>
+      <ActionButton id="undo" state={state} env={env} />
+      <ActionButton id="redo" state={state} env={env} />
       <Divider />
-      <Tool label="Add a node" shortcut="Tab or Ctrl+K" onClick={() => useUIStore.getState().openPalette()}>
-        <Plus />
-      </Tool>
+      <ActionButton id="add" state={state} env={env} />
     </div>
   )
 }
 
 /**
- * Bottom center, only while something is selected: what can be done with it. Everything here is
- * also in the right-click menu, but a touch screen has no right click and no keyboard.
+ * Bottom center, only while something is selected: what is done most with it, and the rest under
+ * "more" (the node menu, for a touch screen that has no right click).
  */
-function SelectionBar() {
-  const selected = useUIStore((s) => s.selected)
-  const graph = useGraphStore((s) => s.graph)
-  // Selected ids can outlive their nodes (after an undo): only what still exists counts.
-  const current = useMemo(() => describeSelection(graph, selected), [graph, selected])
-  const show = current.count > 0
+function SelectionBar({ state: current }: { state: ActionState }) {
+  const show = current.selection.count > 0
   // While the bar leaves, it keeps showing the selection it was about.
-  const selection = useLast(current, show)
-  const fit = useFit()
+  const state = useLast(current, show)
+  const env = useActionEnv()
   const areaTool = useUIStore((s) => s.tool) === 'select'
 
   return (
     <Presence show={show} from="bottom" className={cn(BAR, 'bottom-4 left-1/2 -translate-x-1/2')} role="toolbar" aria-label="Selection">
       {/* A phone has just the room for the buttons. */}
-      <span className="px-2 text-sm whitespace-nowrap text-muted-foreground tabular-nums max-sm:hidden">{selection.count} selected</span>
+      <span className="px-2 text-sm whitespace-nowrap text-muted-foreground tabular-nums max-sm:hidden">{state.selection.count} selected</span>
       <Divider className="max-sm:hidden" />
       {/* A finger has no Shift to draw a rectangle: this arms it for one drag. */}
-      <Tool
-        label="Select an area: drag a rectangle"
-        className="hidden pointer-coarse:inline-flex"
-        active={areaTool}
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Select an area: drag a rectangle"
+        title="Select an area: drag a rectangle"
+        aria-pressed={areaTool}
+        className={cn('hidden pointer-coarse:inline-flex', areaTool && 'bg-selection/15 text-selection')}
         onClick={() => useUIStore.getState().setTool(areaTool ? 'pan' : 'select')}
       >
         <SquareDashedMousePointer />
-      </Tool>
-      <Tool label="Frame the selection" shortcut="F" onClick={() => fit()}>
-        <Scan />
-      </Tool>
-      {selection.previewable.length > 0 && (
-        <Tool label={selection.showPreviews ? 'Show preview' : 'Hide preview'} shortcut="P" onClick={toggleSelectionPreviews}>
-          {selection.showPreviews ? <Eye /> : <EyeOff />}
-        </Tool>
-      )}
-      {selection.nodes.length > 0 && (
-        <Tool label={selection.fold ? 'Fold' : 'Unfold'} shortcut="H" onClick={toggleSelectionFold}>
-          {selection.fold ? <FoldVertical /> : <UnfoldVertical />}
-        </Tool>
-      )}
-      {selection.copyable && (
-        <>
-          <Tool label="Duplicate selection" shortcut="Ctrl+D" onClick={duplicateSelection}>
-            <CopyPlus />
-          </Tool>
-          <Tool label="Copy selection" shortcut="Ctrl+C" onClick={() => void copyToClipboard()}>
-            <Copy />
-          </Tool>
-        </>
-      )}
-      <Tool label="Delete selection" shortcut="Del" disabled={!selection.removable} onClick={deleteSelection}>
-        <Trash2 />
-      </Tool>
+      </Button>
+      <ActionButton id="frame" state={state} env={env} />
+      <ActionButton id="previews" state={state} env={env} />
+      <ActionButton id="fold" state={state} env={env} />
+      <ActionButton id="duplicate" state={state} env={env} />
+      <ActionButton id="delete" state={state} env={env} />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label="More" title="More">
+            <Ellipsis />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="center" side="top" className="w-56">
+          <ActionMenuItems items={MENUS.selection} state={state} env={env} />
+        </DropdownMenuContent>
+      </DropdownMenu>
       <Divider />
-      <Tool label="Deselect" shortcut="Esc" onClick={() => useUIStore.getState().setSelection([])}>
-        <X />
-      </Tool>
+      <ActionButton id="deselect" state={state} env={env} />
     </Presence>
   )
 }
 
 export function Toolbar() {
+  const state = useActionState()
   return (
     <>
-      <ProjectBar />
-      <SelectionBar />
+      <ProjectBar state={state} />
+      <SelectionBar state={state} />
     </>
   )
 }

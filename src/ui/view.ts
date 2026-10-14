@@ -7,7 +7,7 @@ import { useUIStore } from '@/store/uiStore'
  * How "fit" frames the graph, wherever it is triggered from. A single node is centered without
  * zooming in more than a little.
  */
-export const FIT_VIEW = { padding: 0.3, minZoom: 0.5, maxZoom: 1.25, duration: 300 }
+const FIT_VIEW = { padding: 0.3, minZoom: 0.5, maxZoom: 1.25, duration: 300 }
 
 /** The nodes a fit frames: the selection (a wire counts for its two ends), else everything. */
 function framedNodes(): { id: string }[] | undefined {
@@ -27,9 +27,4 @@ function framedNodes(): { id: string }[] | undefined {
 export function useFit() {
   const { fitView } = useReactFlow()
   return useCallback((everything = false) => void fitView({ ...FIT_VIEW, nodes: everything ? undefined : framedNodes() }), [fitView])
-}
-
-/** What F does right now, for the menus: frame the selection, or everything when nothing is selected. */
-export function useFrameLabel() {
-  return useUIStore((s) => s.selected.size > 0) ? 'Frame the selection' : 'Frame everything'
 }

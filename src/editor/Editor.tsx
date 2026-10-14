@@ -17,12 +17,12 @@ import '@xyflow/react/dist/style.css'
 import { canConnect, concreteType, getNodeDef, NOTE_TYPE, resolveGenTypes, type ValueType } from '@/core'
 import { beginGesture, endGesture, useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
+import { useFit } from '@/ui/view'
 import { NoteNode, type NoteFlowNode } from './NoteNode'
 import { ShadeNode, type ShadeFlowNode } from './ShadeNode'
 
 type AppNode = ShadeFlowNode | NoteFlowNode
 
-/** Touch is the main pointer: nodes need a tap before they can be dragged. */
 /** Publishes the zoom as `--zoom`, so borders can keep the same on-screen width at any zoom. */
 function ZoomVar() {
   const zoom = useStore((s) => s.transform[2])
@@ -31,6 +31,19 @@ function ZoomVar() {
   return null
 }
 
+/** Frames the whole graph when asked to (a project was replaced), once its nodes are measured. */
+function FitOnRequest() {
+  const request = useUIStore((s) => s.fitRequest)
+  const fit = useFit()
+  useEffect(() => {
+    if (request === 0) return
+    const t = setTimeout(() => fit(true), 120)
+    return () => clearTimeout(t)
+  }, [request, fit])
+  return null
+}
+
+/** Touch is the main pointer: nodes need a tap before they can be dragged. */
 const TOUCH = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
 
 const nodeTypes = { shade: ShadeNode, note: NoteNode }
@@ -248,6 +261,7 @@ export function Editor({ errors }: EditorProps) {
       proOptions={{ hideAttribution: true }}
     >
       <ZoomVar />
+      <FitOnRequest />
       <Background variant={BackgroundVariant.Dots} gap={20} size={1.5} color="var(--canvas-dot)" />
     </ReactFlow>
   )

@@ -1,21 +1,8 @@
 import { useEffect } from 'react'
 import { useReactFlow } from '@xyflow/react'
-import {
-  copySelection,
-  copyToClipboard,
-  cutSelection,
-  cutToClipboard,
-  duplicateSelection,
-  pasteCopied,
-  pasteText,
-  saveProjectFile,
-  chooseProjectFile,
-  selectAll,
-  toggleSelectionFold,
-  toggleSelectionPreviews,
-} from '@/store/fileActions'
-import { redo, undo } from '@/store/graphStore'
+import { copySelection, copyToClipboard, cutSelection, cutToClipboard, pasteCopied, pasteText } from '@/store/fileActions'
 import { useUIStore } from '@/store/uiStore'
+import { runAction, type ActionId } from './actions'
 import { pointerOnCanvas } from './pointer'
 import { useFit } from './view'
 
@@ -58,11 +45,14 @@ export function Shortcuts() {
   const { zoomIn, zoomOut, screenToFlowPosition } = useReactFlow()
 
   useEffect(() => {
+    const run = (id: ActionId) => runAction(id, { fit })
     // A key adds the node under the mouse, if it is over the canvas (else in the middle of the view).
     const addHere = () => {
       const at = pointerOnCanvas()
-      useUIStore.getState().openPalette(at ? screenToFlowPosition(at) : undefined)
+      runAction('add', { fit, at: at ? screenToFlowPosition(at) : undefined })
     }
+    /** Single keys, without modifiers. */
+    const KEYS: Record<string, ActionId> = { f: 'frame', r: 'result', c: 'code', p: 'previews', h: 'fold', i: 'about', '?': 'help' }
     let pasteFallback: ReturnType<typeof setTimeout> | undefined
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -91,14 +81,9 @@ export function Shortcuts() {
           e.preventDefault()
           addHere()
         } else if (key === 'v') ui.setTool(ui.tool === 'select' ? 'pan' : 'select')
-        else if (key === 'f') fit()
-        else if (key === 'r') ui.toggleResult()
-        else if (key === 'c') ui.toggleCode()
-        else if (key === 'p') toggleSelectionPreviews()
-        else if (key === 'h') toggleSelectionFold()
         else if (e.key === '+' || e.key === '=') void zoomIn({ duration: 150 })
         else if (e.key === '-') void zoomOut({ duration: 150 })
-        else if (e.key === '?') ui.setHelpOpen(true)
+        else if (Object.hasOwn(KEYS, key)) run(KEYS[key])
         return
       }
       if (!mod) return
@@ -110,27 +95,26 @@ export function Shortcuts() {
         addHere()
       } else if (key === 's') {
         e.preventDefault() // the browser would save the page
-        saveProjectFile()
+        run('save')
       } else if (key === 'o') {
         e.preventDefault() // the browser would open a file itself
-        chooseProjectFile(() => setTimeout(() => fit(true), 120))
+        run('open')
       } else if (typing && !isNumberField(e.target)) {
         return // text fields keep their own select all, clipboard and undo
       } else if (key === 'z') {
         e.preventDefault()
-        if (e.shiftKey) redo()
-        else undo()
+        run(e.shiftKey ? 'redo' : 'undo')
       } else if (key === 'y') {
         e.preventDefault()
-        redo()
+        run('redo')
       } else if (typing) {
         return // a number field keeps its own select all and clipboard
       } else if (key === 'a') {
         e.preventDefault()
-        selectAll()
+        run('selectAll')
       } else if (key === 'd') {
         e.preventDefault() // the browser would bookmark the page
-        duplicateSelection()
+        run('duplicate')
       } else if (key === 'c' && !e.shiftKey) {
         // Done here rather than in the `copy` event: browsers do not all send it when no text is selected.
         if (copyingText()) return

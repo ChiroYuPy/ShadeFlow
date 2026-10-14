@@ -16,6 +16,8 @@ interface NodeSpec {
   values?: Record<string, number[]>
   /** Text of a `note` node. */
   text?: string
+  /** Output shown in the node's preview, when it is not the first one. */
+  previewPort?: string
 }
 
 /**
@@ -36,6 +38,7 @@ function graphOf(specs: Record<string, NodeSpec>, wires: string[]): Graph {
       position: { x: s.x, y: s.y > 0 ? Math.round(s.y * ROW_STRETCH) : s.y },
       values: s.values ?? {},
       ...(s.text !== undefined ? { text: s.text } : {}),
+      ...(s.previewPort !== undefined ? { previewPort: s.previewPort } : {}),
     }
   }
   const edges: GraphEdge[] = wires.map((w) => {
@@ -416,6 +419,44 @@ const cells = graphOf(
   ],
 )
 
+/** Fire: a rising noise, weaker toward the top, turned into colors by a Color Ramp. */
+const fire = graphOf(
+  {
+    n1: note(0, -190, 'Time slides the noise down through Tiling and Offset (a negative speed), so the flames seem to rise.'),
+    n2: note(780, -190, 'Split takes the height of the pixel; One Minus of it is 1 at the bottom and 0 at the top. Multiplying the noise by it lets the fire die out as it rises.'),
+    n3: note(1300, -190, 'Color Ramp turns that heat into colors: black where it is cold, then red, orange, yellow and white. Click its bar to add a color, drag one to move it.'),
+    uv: { type: 'uv', x: 0, y: 0 },
+    time: { type: 'time', x: 0, y: 300 },
+    speed: { type: 'multiply', x: 260, y: 300, values: { b: [-0.5] } },
+    rise: { type: 'vec2', x: 520, y: 300 },
+    move: { type: 'tiling-offset', x: 520, y: 0, values: { tiling: [1.5, 1] } },
+    noise: { type: 'fractal-noise', x: 780, y: 0, values: { scale: [4] } },
+    split: { type: 'split', x: 780, y: 380, previewPort: 'y' },
+    fade: { type: 'one-minus', x: 1040, y: 380 },
+    heat: { type: 'multiply', x: 1040, y: 0 },
+    ramp: {
+      type: 'color-ramp',
+      x: 1300,
+      y: 0,
+      values: { stops: [0.12, 0, 0, 0, 0.3, 0.55, 0.04, 0, 0.45, 1, 0.42, 0, 0.6, 1, 0.85, 0.3, 0.75, 1, 1, 0.9] },
+    },
+    out: { type: 'output', x: 1560, y: 100 },
+  },
+  [
+    'time.time > speed.a',
+    'speed.result > rise.y',
+    'uv.uv > move.position',
+    'rise.vector > move.offset',
+    'move.position > noise.position',
+    'uv.uv > split.value',
+    'split.y > fade.x',
+    'noise.result > heat.a',
+    'fade.result > heat.b',
+    'heat.result > ramp.t',
+    'ramp.color > out.color',
+  ],
+)
+
 /** Fisheye: bend the space first, then draw a regular pattern with it. */
 const fisheyeDots = graphOf(
   {
@@ -530,6 +571,7 @@ export const EXAMPLES: Example[] = [
   { id: 'rainbow', name: 'Rainbow', description: 'Colors from hue, saturation, value', graph: withPreviews(rainbow) },
   { id: 'polka-dots', name: 'Polka dots', description: 'Tile and circle masks', graph: withPreviews(polkaDots) },
   { id: 'cells', name: 'Cells', description: 'Voronoi, a palette and a slow drift', graph: withPreviews(cells) },
+  { id: 'fire', name: 'Fire', description: 'Rising noise through a color ramp', graph: withPreviews(fire) },
   { id: 'confetti', name: 'Confetti', description: 'A random color for every tile', graph: withPreviews(confetti) },
   { id: 'sunburst', name: 'Sunburst', description: 'Rays from polar coordinates', graph: withPreviews(sunburst) },
   { id: 'fisheye', name: 'Fisheye', description: 'A pattern seen through a bulging lens', graph: withPreviews(fisheyeDots) },

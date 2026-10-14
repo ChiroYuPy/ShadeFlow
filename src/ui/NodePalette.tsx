@@ -282,7 +282,7 @@ function PaletteBody() {
 export default function NodePalette() {
   const open = useUIStore((s) => s.palette.open)
   return (
-    <Overlay open={open} onClose={close} title="Add a node" data-palette="" className="sm:h-[min(30rem,76%)]">
+    <Overlay open={open} onClose={close} title="Add a node" data-palette="" className="sm:h-[76%]">
       <PaletteBody />
     </Overlay>
   )

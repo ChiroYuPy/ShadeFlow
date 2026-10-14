@@ -79,6 +79,32 @@ describe('replacing the project', () => {
   })
 })
 
+describe('errors', () => {
+  it('takes you to the node an error comes from', async () => {
+    // Any edit gets the project autosaved; then a wire is added by hand that makes a loop.
+    await app.clickNode('Fract')
+    await app.key('d', ['Control'])
+    await app.sleep(1000)
+    await app.page.evaluate(() => {
+      type N = { id: string; type: string; values: Record<string, number[]> }
+      const project = JSON.parse(localStorage.getItem('shadeflow:project')!)
+      const nodes = Object.values(project.graph.nodes) as N[]
+      const mix = nodes.find((n) => n.type === 'mix')!
+      const multiply = nodes.find((n) => n.type === 'multiply' && Object.values(n.values).some((v) => v[0] === 3))!
+      const port = Object.keys(multiply.values).find((k) => multiply.values[k][0] === 3)!
+      project.graph.edges.push({ id: 'loop', from: { nodeId: mix.id, port: 'result' }, to: { nodeId: multiply.id, port } })
+      localStorage.setItem('shadeflow:project', JSON.stringify(project))
+    })
+    await app.reload()
+    await app.key('r') // the result hidden, the error still shows, with its button
+    await app.sleep(400)
+    await app.page.click('[data-show-error]')
+    await app.sleep(500)
+    const selected = await app.page.$$eval('.react-flow__node.selected', (n) => n.length)
+    expect(selected).toBeGreaterThan(0)
+  })
+})
+
 describe('examples', () => {
   const openExamples = async () => {
     await app.page.click('button[aria-label="Project menu"]')
@@ -582,9 +608,7 @@ describe('view', () => {
 
 describe('code panel', () => {
   it('shows the generated code, in each language', async () => {
-    await app.page.click('button[aria-label="Project menu"]')
-    await app.sleep(200)
-    await app.clickMenuItem('Generated code')
+    await app.page.click('button[aria-label^="Generated code"]')
     await app.sleep(500)
     const code = () => app.page.evaluate(() => document.querySelector('pre')?.textContent ?? '')
     expect(await code()).toContain('void main()')

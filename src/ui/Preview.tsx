@@ -6,6 +6,7 @@ import { ShaderCanvas } from '@/render/ShaderCanvas'
 import type { ShaderStatus } from '@/render/ShaderRenderer'
 import { useUIStore } from '@/store/uiStore'
 import { Presence } from './Presence'
+import { ShowErrorNodes } from './ShowErrorNodes'
 import { useBackToClose } from './useBackToClose'
 
 interface PreviewProps {
@@ -13,6 +14,8 @@ interface PreviewProps {
   onStatus: (status: ShaderStatus) => void
   /** Why the shader cannot be shown, if it cannot. */
   error: string
+  /** The nodes the error comes from, to go and see them. */
+  errorNodes: string[]
 }
 
 function PanelButton({ label, shortcut, ...props }: ComponentProps<typeof Button> & { label: string; shortcut?: string }) {
@@ -23,7 +26,7 @@ function PanelButton({ label, shortcut, ...props }: ComponentProps<typeof Button
  * The result of the shader: a panel in the top right corner, in two sizes, that can also fill
  * the screen. The picture itself is left alone (the Mouse node reads the pointer over it).
  */
-export function Preview({ code, onStatus, error }: PreviewProps) {
+export function Preview({ code, onStatus, error, errorNodes }: PreviewProps) {
   const open = useUIStore((s) => s.resultOpen)
   const large = useUIStore((s) => s.resultLarge)
   const fullscreen = useUIStore((s) => s.previewFullscreen)
@@ -47,7 +50,10 @@ export function Preview({ code, onStatus, error }: PreviewProps) {
           <ShaderCanvas code={code} onStatus={onStatus} />
         </div>
         {error && (
-          <pre className="max-h-28 overflow-y-auto border-t border-destructive px-2.5 py-2 text-xs whitespace-pre-wrap text-destructive">{error}</pre>
+          <div className="flex flex-col items-start gap-2 border-t border-destructive px-2.5 py-2">
+            <pre className="max-h-28 w-full overflow-y-auto text-xs whitespace-pre-wrap text-destructive">{error}</pre>
+            <ShowErrorNodes ids={errorNodes} />
+          </div>
         )}
         <div className="flex h-9 items-center border-t pr-1 pl-2.5">
           <span className={cn('min-w-0 flex-1 truncate text-xs text-muted-foreground', error && 'text-destructive')}>

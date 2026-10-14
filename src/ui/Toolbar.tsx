@@ -12,7 +12,10 @@ const BAR = 'panel absolute flex items-center gap-1 p-1'
 
 const Divider = ({ className }: { className?: string }) => <span className={cn('mx-1 h-5 w-px bg-border', className)} />
 
-/** Top left: the project menu (files, examples, panels, help), the history, and adding a node. */
+/**
+ * Top left: the project menu (files, examples, panels, help), the history, adding a node and the
+ * generated code (what the graph teaches: always one click away).
+ */
 function ProjectBar({ state }: { state: ActionState }) {
   const env = useActionEnv()
   return (
@@ -32,6 +35,7 @@ function ProjectBar({ state }: { state: ActionState }) {
       <ActionButton id="redo" state={state} env={env} />
       <Divider />
       <ActionButton id="add" state={state} env={env} />
+      <ActionButton id="code" state={state} env={env} />
     </div>
   )
 }

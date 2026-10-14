@@ -4,6 +4,7 @@ import { generateCode, SHADER_LANGUAGES, type IRModule, type ShaderLanguage } fr
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/uiStore'
 import { PANEL_BUTTON, PANEL_HEADER } from './panel'
+import { ShowErrorNodes } from './ShowErrorNodes'
 
 const LANGUAGE_LABELS: Record<ShaderLanguage, string> = { glsl: 'GLSL', wgsl: 'WGSL', hlsl: 'HLSL' }
 
@@ -32,7 +33,7 @@ function highlight(line: string): ReactNode[] {
 /** Stands for code not written yet. */
 const PENDING = 'pending' as const
 
-export default function CodePanel({ ir }: { ir: IRModule | null }) {
+export default function CodePanel({ ir, errorNodes }: { ir: IRModule | null; errorNodes: string[] }) {
   const [copied, setCopied] = useState(false)
   const language = useUIStore((s) => s.codeLanguage)
   // The panel opens at once, the code is written right after (and after each edit, without
@@ -83,7 +84,10 @@ export default function CodePanel({ ir }: { ir: IRModule | null }) {
         {code === PENDING ? (
           <span className="text-muted-foreground">Generating code…</span>
         ) : code === null ? (
-          <span className="text-muted-foreground">The graph has an error, see the highlighted node.</span>
+          <span className="flex flex-col items-start gap-2 font-sans">
+            <span className="text-muted-foreground">The graph has an error: there is no code to show.</span>
+            <ShowErrorNodes ids={errorNodes} />
+          </span>
         ) : (
           code.split('\n').map((text, i) => (
             // Indentation is padding, so a wrapped long line stays aligned under its start.

@@ -57,7 +57,7 @@ function ShadeNodeImpl({ id, data, selected }: NodeProps<ShadeFlowNode>) {
       // The outline is a ring (outside the box) rather than a border, so the header can be
       // flush with the node's rounded corners.
       className={cn(
-        'w-52 rounded-xl bg-node text-sm shadow-lg ring-[length:var(--node-ring)] ring-node-border',
+        'group w-52 rounded-xl bg-node text-sm shadow-lg ring-[length:var(--node-ring)] ring-node-border',
         selected && 'ring-selection',
         data.error && 'ring-destructive',
       )}
@@ -73,6 +73,8 @@ function ShadeNodeImpl({ id, data, selected }: NodeProps<ShadeFlowNode>) {
             className={cn(
               'nodrag flex size-5 shrink-0 items-center justify-center rounded hover:text-foreground',
               data.showPreview ? 'text-foreground' : 'text-muted-foreground',
+              // Hidden previews are the default: their crossed eye only shows where the node is being looked at.
+              !data.showPreview && !selected && 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
             )}
             onClick={() => store().togglePreview(id)}
           >

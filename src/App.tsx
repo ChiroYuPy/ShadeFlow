@@ -11,7 +11,9 @@ import { SLIDE_MS } from '@/ui/motion'
 import { Presence } from '@/ui/Presence'
 import { Preview } from '@/ui/Preview'
 import { ContextMenu } from '@/ui/ContextMenu'
+import { EmptyHint } from '@/ui/EmptyHint'
 import { Shortcuts } from '@/ui/Shortcuts'
+import { ShowErrorNodes } from '@/ui/ShowErrorNodes'
 import { Toolbar } from '@/ui/Toolbar'
 import { useLast } from '@/ui/useLast'
 // Panels are part of the page, never `lazy`: it would delay their first appearance by ~300 ms.
@@ -40,6 +42,9 @@ function App() {
     return Object.fromEntries(Object.entries(byNode).map(([id, messages]) => [id, messages.join('\n')]))
   }, [result])
 
+  // Nothing can be drawn: these nodes are why.
+  const errorNodes = useMemo(() => (result.ok ? [] : Object.keys(errors)), [result, errors])
+
   // The node previews wait for the code panel to be in place (or gone).
   useEffect(() => previewHub.hold(SLIDE_MS), [codeOpen])
 
@@ -56,63 +61,69 @@ function App() {
     (resultOpen && status && !status.ok ? status.log : '')
   // Panels that are leaving keep their last content.
   const shownNotice = useLast(notice, notice !== null)
-  const errorAlone = globalError !== '' && !resultOpen
-  const shownError = useLast(globalError, errorAlone)
+  // The graph cannot compile because of a node: said once, with a way to go and see it.
+  const graphError = globalError || (result.ok ? '' : 'The graph has an error.')
+  const errorAlone = graphError !== '' && !resultOpen
+  const errorShown = useMemo(() => ({ message: graphError, nodes: errorNodes }), [graphError, errorNodes])
+  const shownError = useLast(errorShown, errorAlone)
 
   return (
     <div className="relative h-full overflow-hidden">
+      {/* Around everything: the panels frame nodes too. */}
       <ReactFlowProvider>
         <Editor errors={errors} />
         <Shortcuts />
         <Toolbar />
+        <EmptyHint />
         <ContextMenu />
         <NodePalette />
         <ExamplesPanel />
+
+        <Presence
+          show={codeOpen}
+          from="bottomOrLeft"
+          // A phone keeps the bottom for the selection bar; a wide screen gives it as much height as its
+          // code needs, down to that bar.
+          className="absolute inset-x-3 bottom-20 flex h-[40%] flex-col sm:inset-x-auto sm:top-[4.25rem] sm:bottom-auto sm:left-4 sm:h-auto sm:max-h-[calc(100%-9rem)] sm:w-[26rem]"
+        >
+          <CodePanel ir={result.ok ? result.ir : null} errorNodes={errorNodes} />
+        </Presence>
+        <HelpDialog />
+        <NodeAbout />
+        <Preview code={glsl} onStatus={setStatus} error={graphError} errorNodes={errorNodes} />
+
+        {/* The result panel shows the error itself; hidden, the error still has to be seen. */}
+        <Presence
+          show={errorAlone}
+          from="right"
+          className="panel absolute top-3 right-3 max-w-[min(30rem,90%)] border-destructive p-3 sm:top-4 sm:right-4"
+        >
+          <pre className="text-xs whitespace-pre-wrap text-destructive">{shownError.message}</pre>
+          <ShowErrorNodes ids={shownError.nodes} className="mt-2" />
+        </Presence>
+        <Presence
+          show={notice !== null}
+          from="bottom"
+          role="status"
+          data-notice=""
+          className="panel absolute bottom-20 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-3 px-3 py-2 text-sm"
+        >
+          <span>{shownNotice?.message}</span>
+          {shownNotice?.action && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-my-1 -mr-2 text-selection"
+              onClick={() => {
+                shownNotice.action?.run()
+                useUIStore.getState().setNotice(null)
+              }}
+            >
+              {shownNotice.action.label}
+            </Button>
+          )}
+        </Presence>
       </ReactFlowProvider>
-
-      <Presence
-        show={codeOpen}
-        from="bottomOrLeft"
-        // A phone keeps the bottom for the selection bar; a wide screen gives it as much height as its
-        // code needs, down to that bar.
-        className="absolute inset-x-3 bottom-20 flex h-[40%] flex-col sm:inset-x-auto sm:top-[4.25rem] sm:bottom-auto sm:left-4 sm:h-auto sm:max-h-[calc(100%-9rem)] sm:w-[26rem]"
-      >
-        <CodePanel ir={result.ok ? result.ir : null} />
-      </Presence>
-      <HelpDialog />
-      <NodeAbout />
-      <Preview code={glsl} onStatus={setStatus} error={globalError || (result.ok ? '' : 'The graph has an error, see the highlighted node.')} />
-
-      {/* The result panel shows the error itself; hidden, the error still has to be seen. */}
-      <Presence
-        show={errorAlone}
-        from="right"
-        className="panel absolute top-3 right-3 max-w-[min(30rem,90%)] border-destructive p-3 sm:top-4 sm:right-4"
-      >
-        <pre className="text-xs whitespace-pre-wrap text-destructive">{shownError}</pre>
-      </Presence>
-      <Presence
-        show={notice !== null}
-        from="bottom"
-        role="status"
-        data-notice=""
-        className="panel absolute bottom-20 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-3 px-3 py-2 text-sm"
-      >
-        <span>{shownNotice?.message}</span>
-        {shownNotice?.action && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="-my-1 -mr-2 text-selection"
-            onClick={() => {
-              shownNotice.action?.run()
-              useUIStore.getState().setNotice(null)
-            }}
-          >
-            {shownNotice.action.label}
-          </Button>
-        )}
-      </Presence>
     </div>
   )
 }

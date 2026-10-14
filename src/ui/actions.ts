@@ -5,7 +5,7 @@ import {
   BoxSelect,
   CircleHelp,
   ClipboardPaste,
-  Code,
+  CodeXml,
   Copy,
   CopyPlus,
   Download,
@@ -159,7 +159,7 @@ export const ACTIONS = {
   redo: { label: 'Redo', icon: Redo2, keys: [[MOD, 'Shift', 'Z'], [MOD, 'Y']], enabled: (s) => s.canRedo, run: redo },
 
   result: { label: 'Result preview', icon: Monitor, keys: [['R']], checked: (s) => s.resultOpen, run: () => ui().toggleResult() },
-  code: { label: 'Generated code', icon: Code, keys: [['C']], checked: (s) => s.codeOpen, run: () => ui().toggleCode() },
+  code: { label: 'Generated code', icon: CodeXml, keys: [['C']], checked: (s) => s.codeOpen, run: () => ui().toggleCode() },
   help: { label: 'Help and shortcuts', icon: CircleHelp, keys: [['?']], run: () => ui().setHelpOpen(true) },
 
   newProject: { label: 'New project', icon: FilePlus, run: newProject },
@@ -174,8 +174,11 @@ export type ActionId = keyof typeof ACTIONS
 export type MenuEntry = ActionId | '-'
 
 export const MENUS = {
-  /** The ≡ menu. Paste and Select all are there for touch screens, which have neither keys nor right click. */
-  project: ['newProject', 'examples', '-', 'open', 'save', '-', 'paste', 'selectAll', 'frame', '-', 'result', 'code', '-', 'help'],
+  /**
+   * The ≡ menu. Paste and Select all are there for touch screens, which have neither keys nor right
+   * click. The code has its own button in the bar.
+   */
+  project: ['newProject', 'examples', '-', 'open', 'save', '-', 'paste', 'selectAll', 'frame', '-', 'result', '-', 'help'],
   /** Right-click on empty canvas. */
   pane: ['add', 'paste', '-', 'selectAll', 'frame'],
   /** What can be done with the selected nodes: the node menu, and the "more" of the selection bar. */

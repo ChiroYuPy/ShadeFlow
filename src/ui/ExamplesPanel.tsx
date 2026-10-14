@@ -4,7 +4,7 @@ import { NodePreview } from '@/editor/NodePreview'
 import { previewHub } from '@/render/previewHub'
 import { confirmReplace, loadGraph } from '@/store/fileActions'
 import { useUIStore } from '@/store/uiStore'
-import { Overlay, OverlayClose } from './Overlay'
+import { Overlay, OverlayHeader } from './Overlay'
 import { FIT_VIEW } from './view'
 
 const close = () => useUIStore.getState().setExamplesOpen(false)
@@ -34,10 +34,7 @@ export default function ExamplesPanel() {
 
   return (
     <Overlay open={open} onClose={close} title="Examples" data-examples="" className="sm:w-[44rem]">
-      <div className="flex items-center justify-between border-b py-2 pr-2 pl-4">
-        <h2 className="font-medium">Examples</h2>
-        <OverlayClose />
-      </div>
+      <OverlayHeader title="Examples" />
       {/* The list scrolls; the grid inside keeps its cards at their full size. */}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

@@ -1,6 +1,5 @@
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useUIStore } from '@/store/uiStore'
-import { useBackToClose } from './useBackToClose'
+import { Overlay, OverlayHeader } from './Overlay'
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 const MOD = isMac ? '⌘' : 'Ctrl'
@@ -23,7 +22,6 @@ const SECTIONS: { title: string; items: Gesture[] }[] = [
       { keys: ['Drag a wire end'], does: 'Move it to another port, or drop it on empty space to remove it' },
       { keys: ['Eye icon in a node header'], does: 'Show or hide that node\'s live preview (hidden by default)' },
       { keys: ['Arrow in a node header'], does: 'Fold the node: only the plugs in use stay visible' },
-      { keys: ['Click a line in the code panel'], does: 'Select the node that produced it; selecting a node lights up its lines' },
       { keys: ['Click a node output name'], does: 'Choose which output the node previews' },
     ],
   },
@@ -80,44 +78,41 @@ function Keys({ keys }: { keys: string[] }) {
   )
 }
 
+const close = () => useUIStore.getState().setHelpOpen(false)
+
 /** Everything you can do that is not obvious from the interface. */
 export default function HelpDialog() {
   const open = useUIStore((s) => s.helpOpen)
-  useBackToClose(open, () => useUIStore.getState().setHelpOpen(false))
 
   return (
-    <Dialog open={open} onOpenChange={(o) => useUIStore.getState().setHelpOpen(o)}>
-      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Gestures and shortcuts</DialogTitle>
-          <DialogDescription>
-            Connect nodes from output (right) to input (left). Hover a node to read what it does.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-5">
-          {SECTIONS.map((section) => (
-            <section key={section.title}>
-              <h3 className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">{section.title}</h3>
-              <ul className="flex flex-col gap-2">
-                {section.items.map((item) => (
-                  <li key={item.does} className="flex items-start justify-between gap-4 text-sm">
-                    <span className="flex flex-col gap-1">
-                      <Keys keys={item.keys} />
-                      {item.or?.map((alt, i) => (
-                        <span key={i} className="flex items-center gap-1">
-                          <span className="text-xs text-muted-foreground">or</span>
-                          <Keys keys={alt} />
-                        </span>
-                      ))}
-                    </span>
-                    <span className="max-w-[55%] text-right text-muted-foreground">{item.does}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
-      </DialogContent>
-    </Dialog>
+    <Overlay open={open} onClose={close} title="Gestures and shortcuts" data-help="">
+      <OverlayHeader title="Gestures and shortcuts" />
+      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain p-4">
+        <p className="text-sm text-muted-foreground">
+          Connect nodes from output (right) to input (left). Hover a node to read what it does.
+        </p>
+        {SECTIONS.map((section) => (
+          <section key={section.title}>
+            <h3 className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">{section.title}</h3>
+            <ul className="flex flex-col gap-2">
+              {section.items.map((item) => (
+                <li key={item.does} className="flex items-start justify-between gap-4 text-sm">
+                  <span className="flex flex-col gap-1">
+                    <Keys keys={item.keys} />
+                    {item.or?.map((alt, i) => (
+                      <span key={i} className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">or</span>
+                        <Keys keys={alt} />
+                      </span>
+                    ))}
+                  </span>
+                  <span className="max-w-[55%] text-right text-muted-foreground">{item.does}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </Overlay>
   )
 }

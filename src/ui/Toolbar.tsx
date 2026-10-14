@@ -53,7 +53,7 @@ import { Presence } from './Presence'
 import { useLast } from './useLast'
 import { FIT_VIEW } from './view'
 
-const BAR = 'absolute flex items-center gap-1 rounded-xl border bg-card/90 p-1 shadow-lg backdrop-blur'
+const BAR = 'panel absolute flex items-center gap-1 p-1'
 
 /** An icon button; `shortcut` is shown in its tooltip. */
 function Tool({ label, shortcut, active, ...props }: ComponentProps<typeof Button> & { label: string; shortcut?: string; active?: boolean }) {

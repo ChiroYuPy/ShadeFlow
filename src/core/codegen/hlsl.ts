@@ -1,6 +1,6 @@
 import type { IRModule } from '../ir/ir'
 import type { ValueType } from '../types'
-import { emit, type Emitted, type Target } from './emit'
+import { emit, type Target } from './emit'
 
 /** HLSL (Direct3D) pixel shader backend. Display/export only: nothing runs it in the browser. */
 
@@ -63,26 +63,24 @@ const hlsl: Target = {
     random: { call: 'sf_random' },
   },
   input: (name) => ({ uv: 'uv', time: 'time', resolution: 'resolution', mouse: 'mouse' })[name],
-  program: ({ usedInputs, usedOps, body, result, mark }) =>
+  program: ({ usedInputs, usedOps, body, result }) =>
     [
       'cbuffer Uniforms : register(b0) {',
-      mark('  float2 resolution;', 'resolution'),
-      mark('  float time;', 'time'),
-      ...(usedInputs.has('mouse') ? [mark('  float2 mouse;', 'mouse')] : []),
+      '  float2 resolution;',
+      '  float time;',
+      ...(usedInputs.has('mouse') ? ['  float2 mouse;'] : []),
       '};',
       '',
       ...(usedOps.has('noise') ? [NOISE, ''] : []),
       ...(usedOps.has('random') ? [RANDOM, ''] : []),
       'float4 main(float4 position : SV_Position) : SV_Target {',
       '  // HLSL pixel coordinates start at the top-left: flip Y so uv matches GLSL.',
-      mark('  float2 uv = float2(position.x, resolution.y - position.y) / resolution;', 'uv'),
+      '  float2 uv = float2(position.x, resolution.y - position.y) / resolution;',
       ...body,
-      mark(`  return float4(${result}, 1.0);`, 'output'),
+      `  return float4(${result}, 1.0);`,
       '}',
       '',
     ].join('\n'),
 }
 
-export const emitHLSL = (ir: IRModule): Emitted => emit(ir, hlsl)
-
-export const generateHLSL = (ir: IRModule): string => emitHLSL(ir).code
+export const generateHLSL = (ir: IRModule): string => emit(ir, hlsl)

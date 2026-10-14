@@ -1,5 +1,5 @@
 import type { IRModule } from '../ir/ir'
-import { emit, type Emitted, type Target } from './emit'
+import { emit, type Target } from './emit'
 
 /** GLSL ES 3.00 (WebGL2) backend. */
 
@@ -58,30 +58,28 @@ const glsl: Target = {
     random: { call: 'sf_random' },
   },
   input: (name) => ({ uv: 'uv', time: 'u_time', resolution: 'u_resolution', mouse: 'u_mouse' })[name],
-  program: ({ usedInputs, usedOps, body, result, mark }) =>
+  program: ({ usedInputs, usedOps, body, result }) =>
     [
       '#version 300 es',
       'precision highp float;',
       // Integers default to mediump (often 16 bits on phones): the hash needs all 32.
       ...(usedOps.has('noise') || usedOps.has('random') ? ['precision highp int;'] : []),
       '',
-      mark('uniform vec2 u_resolution;', 'resolution'),
-      ...(usedInputs.has('time') ? [mark('uniform float u_time;', 'time')] : []),
-      ...(usedInputs.has('mouse') ? [mark('uniform vec2 u_mouse;', 'mouse')] : []),
+      'uniform vec2 u_resolution;',
+      ...(usedInputs.has('time') ? ['uniform float u_time;'] : []),
+      ...(usedInputs.has('mouse') ? ['uniform vec2 u_mouse;'] : []),
       '',
       'out vec4 fragColor;',
       '',
       ...(usedOps.has('noise') ? [NOISE, ''] : []),
       ...(usedOps.has('random') ? [RANDOM, ''] : []),
       'void main() {',
-      mark('  vec2 uv = gl_FragCoord.xy / u_resolution;', 'uv'),
+      '  vec2 uv = gl_FragCoord.xy / u_resolution;',
       ...body,
-      mark(`  fragColor = vec4(${result}, 1.0);`, 'output'),
+      `  fragColor = vec4(${result}, 1.0);`,
       '}',
       '',
     ].join('\n'),
 }
 
-export const emitGLSL = (ir: IRModule): Emitted => emit(ir, glsl)
-
-export const generateGLSL = (ir: IRModule): string => emitGLSL(ir).code
+export const generateGLSL = (ir: IRModule): string => emit(ir, glsl)

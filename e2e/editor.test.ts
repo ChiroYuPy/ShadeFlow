@@ -157,13 +157,16 @@ describe('node palette', () => {
     expect((await app.paletteItems())[0]).toBe('Smoothstep')
   })
 
-  it('shows what the highlighted node does', async () => {
+  it('unfolds what the highlighted node does, without a live picture', async () => {
     await app.openPalette()
     await app.page.keyboard.type('noise')
-    await app.sleep(400)
-    const aside = await app.page.evaluate(() => document.querySelector('aside')?.textContent ?? '')
-    expect(aside).toContain('Noise')
-    expect(aside).toContain('Position')
+    await app.sleep(200)
+    await app.key('ArrowRight')
+    await app.sleep(300)
+    const text = await app.page.$eval('[data-palette]', (p) => p.textContent ?? '')
+    expect(text).toContain('Position')
+    expect(text).toContain('Outputs')
+    expect(await app.page.$$eval('[data-palette] canvas, [data-palette] [data-preview]', (c) => c.length)).toBe(0)
   })
 })
 
@@ -179,7 +182,7 @@ describe('node palette, on a touch screen', () => {
     await app.sleep(300)
     const text = await app.page.$eval('[data-palette]', (p) => p.textContent ?? '')
     expect(text).toContain('corrected for the aspect ratio so circles stay round') // the whole description
-    expect(text).toContain('Add Centered UV')
+    expect(text).toContain('Outputs')
     expect(await app.nodeCount()).toBe(before)
     await app.page.setViewport({ width: 1400, height: 800 })
   })
@@ -445,16 +448,11 @@ describe('view', () => {
 })
 
 describe('code panel', () => {
-  it('shows the generated code and lights up the lines of the selected node', async () => {
+  it('shows the generated code, in each language', async () => {
     await app.page.click('button[aria-label="Generated code"]')
     await app.sleep(500)
     const code = () => app.page.evaluate(() => document.querySelector('pre')?.textContent ?? '')
     expect(await code()).toContain('void main()')
-
-    // a node on the right: the panel covers the left of the canvas
-    await app.clickNode('Fract')
-    const lit = await app.page.evaluate(() => [...document.querySelectorAll('[data-lit]')].map((e) => e.textContent))
-    expect(lit.length).toBeGreaterThan(0)
 
     await app.page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[role=tab]')].find((t) => t.textContent === 'WGSL')?.click())
     await app.sleep(300)

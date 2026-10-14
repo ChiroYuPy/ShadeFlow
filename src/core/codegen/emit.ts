@@ -18,11 +18,6 @@ interface Program {
   body: string[]
   /** Expression of the final color (a vec3). */
   result: string
-  /**
-   * Returns a program line unchanged, linking it to the node behind a shader input
-   * (or the Output node) so the code panel can highlight it.
-   */
-  mark(line: string, key: IRInputName | 'output'): string
 }
 
 export interface Target {
@@ -41,29 +36,10 @@ function literal(n: number): string {
   return n < 0 ? `(${s})` : s
 }
 
-/** Generated code, and which graph node each declaration line comes from. */
-export interface Emitted {
-  code: string
-  /** Declaration line (exact text) → id of the node that produced it. */
-  origins: ReadonlyMap<string, string>
-}
-
-export function emit(ir: IRModule, target: Target): Emitted {
+export function emit(ir: IRModule, target: Target): string {
   const names = new Map<ValueId, string>()
   const counters = new Map<string, number>()
   const body: string[] = []
-  const origins = new Map<string, string>()
-  const inputOrigins = new Map<IRInputName, string>()
-  for (const instr of ir.instructions) {
-    if (instr.expr.kind === 'input' && instr.origin !== undefined && !inputOrigins.has(instr.expr.name)) {
-      inputOrigins.set(instr.expr.name, instr.origin)
-    }
-  }
-  const mark = (line: string, key: IRInputName | 'output') => {
-    const origin = key === 'output' ? ir.resultOrigin : inputOrigins.get(key)
-    if (origin !== undefined) origins.set(line, origin)
-    return line
-  }
   const usedInputs = new Set<IRInputName>()
   const usedOps = new Set<OpName>()
   const ref = (id: ValueId) => names.get(id)!
@@ -115,10 +91,8 @@ export function emit(ir: IRModule, target: Target): Emitted {
     counters.set(base, n)
     const name = `${base}_${n}`
     names.set(instr.id, name)
-    const line = target.declare(instr.type, name, text)
-    body.push(line)
-    if (instr.origin !== undefined) origins.set(line, instr.origin)
+    body.push(target.declare(instr.type, name, text))
   }
 
-  return { code: target.program({ usedInputs, usedOps, body, result: ref(ir.result), mark }), origins }
+  return target.program({ usedInputs, usedOps, body, result: ref(ir.result) })
 }

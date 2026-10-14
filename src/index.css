@@ -90,6 +90,9 @@
   --ring: var(--selection);
   --radius: 0.625rem;
 
+  /* Every panel, bar, menu and dialog floats the same way (the `panel` utility below). */
+  --panel-shadow: inset 0 1px 0 oklch(1 0 0 / 5%), 0 12px 32px -8px oklch(0 0 0 / 60%);
+
   --canvas: oklch(0.14 0 0);
   --canvas-dot: oklch(1 0 0 / 8%);
   --node: oklch(0.21 0 0);
@@ -108,6 +111,18 @@
   --port-vec2: oklch(0.78 0.14 150);
   --port-vec3: oklch(0.78 0.13 80);
   --port-vec4: oklch(0.72 0.17 320);
+}
+
+/*
+ * The one look of everything floating over the canvas: panels, bars, menus, dialogs.
+ * The border color comes from the base layer, so `border-destructive` & co. still apply.
+ */
+@utility panel {
+  border-width: 1px;
+  border-radius: var(--radius-xl);
+  background-color: var(--card);
+  color: var(--card-foreground);
+  box-shadow: var(--panel-shadow);
 }
 
 @layer base {

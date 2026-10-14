@@ -34,14 +34,10 @@ export interface IRInstr {
   id: ValueId
   type: ValueType
   expr: IRExpr
-  /** Graph node that produced this instruction (for code ↔ node highlighting). */
-  origin?: string
 }
 
 export interface IRModule {
   instructions: IRInstr[]
   /** The final color (always a vec3). */
   result: ValueId
-  /** The Output node the result comes from, when compiling the whole graph. */
-  resultOrigin?: string
 }

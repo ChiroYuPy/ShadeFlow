@@ -27,4 +27,7 @@ export const SLIDE = {
   sheet: `${BASE} max-sm:data-[state=open]:fade-in-100 max-sm:data-[state=open]:slide-in-from-bottom max-sm:data-[state=closed]:fade-out-100 max-sm:data-[state=closed]:slide-out-to-bottom sm:data-[state=open]:slide-in-from-bottom-4 sm:data-[state=closed]:slide-out-to-bottom-4`,
 }
 
+/** How long a panel takes to come or go (the `duration-200` above), with a margin. */
+export const SLIDE_MS = 250
+
 export type SlideFrom = keyof typeof SLIDE

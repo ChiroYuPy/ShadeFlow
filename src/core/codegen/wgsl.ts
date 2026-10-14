@@ -1,6 +1,6 @@
 import type { IRModule } from '../ir/ir'
 import type { ValueType } from '../types'
-import { emit, type Emitted, type Target } from './emit'
+import { emit, type Target } from './emit'
 
 /**
  * WGSL (WebGPU) backend. Mirrors the GLSL output so both can be read side by
@@ -66,12 +66,12 @@ const wgsl: Target = {
     random: { call: 'sf_random' },
   },
   input: (name) => ({ uv: 'uv', time: 'uniforms.time', resolution: 'uniforms.resolution', mouse: 'uniforms.mouse' })[name],
-  program: ({ usedInputs, usedOps, body, result, mark }) =>
+  program: ({ usedInputs, usedOps, body, result }) =>
     [
       'struct Uniforms {',
-      mark('  resolution: vec2<f32>,', 'resolution'),
-      mark('  time: f32,', 'time'),
-      ...(usedInputs.has('mouse') ? [mark('  mouse: vec2<f32>,', 'mouse')] : []),
+      '  resolution: vec2<f32>,',
+      '  time: f32,',
+      ...(usedInputs.has('mouse') ? ['  mouse: vec2<f32>,'] : []),
       '}',
       '',
       '@group(0) @binding(0) var<uniform> uniforms: Uniforms;',
@@ -81,14 +81,12 @@ const wgsl: Target = {
       '@fragment',
       'fn fs_main(@builtin(position) frag_coord: vec4<f32>) -> @location(0) vec4<f32> {',
       '  // WGSL pixel coordinates start at the top-left: flip Y so uv matches GLSL.',
-      mark('  let uv = vec2<f32>(frag_coord.x, uniforms.resolution.y - frag_coord.y) / uniforms.resolution;', 'uv'),
+      '  let uv = vec2<f32>(frag_coord.x, uniforms.resolution.y - frag_coord.y) / uniforms.resolution;',
       ...body,
-      mark(`  return vec4<f32>(${result}, 1.0);`, 'output'),
+      `  return vec4<f32>(${result}, 1.0);`,
       '}',
       '',
     ].join('\n'),
 }
 
-export const emitWGSL = (ir: IRModule): Emitted => emit(ir, wgsl)
-
-export const generateWGSL = (ir: IRModule): string => emitWGSL(ir).code
+export const generateWGSL = (ir: IRModule): string => emit(ir, wgsl)

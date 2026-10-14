@@ -37,7 +37,7 @@ export function Preview({ code, onStatus, error }: PreviewProps) {
         from="right"
         data-result=""
         className={cn(
-          'absolute top-3 right-3 flex flex-col overflow-hidden rounded-xl border bg-card shadow-lg transition-[width] duration-200 ease-out sm:top-4 sm:right-4',
+          'panel absolute top-3 right-3 flex flex-col overflow-hidden transition-[width] duration-200 ease-out sm:top-4 sm:right-4',
           // Large, on a phone: as wide as the screen allows, under the bar of the top left corner.
           large ? 'w-[calc(100%-1.5rem)] max-sm:top-[4.25rem] sm:w-96' : 'w-40 sm:w-56',
           error && 'border-destructive',

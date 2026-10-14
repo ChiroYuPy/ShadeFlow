@@ -129,7 +129,6 @@ function lower(graph: Graph, options: CompileOptions, diagnostics: Diagnostic[])
       }
     }
     if (blocked) throw new Blocked()
-    b.origin = nodeId
 
     // 2. Resolve the type shared by the generic ports.
     const vectorTypes = new Set<ValueType>()
@@ -165,20 +164,16 @@ function lower(graph: Graph, options: CompileOptions, diagnostics: Diagnostic[])
 
   // The value the shader displays.
   let rootId: ValueId | null = null
-  /** Node the final color comes from (the Output node, or the previewed node). */
-  let rootOrigin: string | undefined
   try {
     if (options.root) {
       const { nodeId, port } = options.root
       const value = lowerNode(nodeId)[port]
       if (value === undefined) throw new CompileError(`This node has no "${port}" value`, nodeId)
       rootId = toColor(b, value)
-      rootOrigin = nodeId
     } else {
       const output = Object.values(graph.nodes).find((n) => n.type === 'output')
       if (!output) throw new CompileError('Add an Output node to see a result')
       rootId = lowerNode(output.id).color
-      rootOrigin = output.id
     }
   } catch (e) {
     if (e instanceof CompileError) report(e)
@@ -197,7 +192,7 @@ function lower(graph: Graph, options: CompileOptions, diagnostics: Diagnostic[])
     }
   }
 
-  return rootId === null ? null : b.finish(rootId, rootOrigin)
+  return rootId === null ? null : b.finish(rootId)
 }
 
 /** Display conversion used by previews: any value → an RGB color. */

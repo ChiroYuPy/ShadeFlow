@@ -1,7 +1,6 @@
-import type { Emitted } from './codegen/emit'
-import { emitGLSL, generateGLSL } from './codegen/glsl'
-import { emitHLSL } from './codegen/hlsl'
-import { emitWGSL } from './codegen/wgsl'
+import { generateGLSL } from './codegen/glsl'
+import { generateHLSL } from './codegen/hlsl'
+import { generateWGSL } from './codegen/wgsl'
 import type { IRModule } from './ir/ir'
 import { compileGraph, type CompileOptions, type Diagnostic } from './compile/lower'
 import type { Graph } from './graph'
@@ -33,26 +32,16 @@ export { canConnect, compatiblePort, concreteType, resolveGenTypes, type WireAnc
 export const SHADER_LANGUAGES = ['glsl', 'wgsl', 'hlsl'] as const
 export type ShaderLanguage = (typeof SHADER_LANGUAGES)[number]
 
-function emitCode(ir: IRModule, language: ShaderLanguage): Emitted {
-  switch (language) {
-    case 'glsl':
-      return emitGLSL(ir)
-    case 'wgsl':
-      return emitWGSL(ir)
-    case 'hlsl':
-      return emitHLSL(ir)
-  }
-}
-
 /** Print an IR module in the given shading language. */
 export function generateCode(ir: IRModule, language: ShaderLanguage): string {
-  return emitCode(ir, language).code
-}
-
-/** The code split in lines, each with the id of the graph node that produced it (if any). */
-export function generateCodeLines(ir: IRModule, language: ShaderLanguage): { text: string; nodeId?: string }[] {
-  const { code, origins } = emitCode(ir, language)
-  return code.split('\n').map((text) => ({ text, nodeId: origins.get(text) }))
+  switch (language) {
+    case 'glsl':
+      return generateGLSL(ir)
+    case 'wgsl':
+      return generateWGSL(ir)
+    case 'hlsl':
+      return generateHLSL(ir)
+  }
 }
 export {
   extractFragment,

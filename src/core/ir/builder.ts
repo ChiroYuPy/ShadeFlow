@@ -7,9 +7,6 @@ import { OPS, type OpName } from './ops'
  * (so two `sin(time)` nodes share one instruction).
  */
 export class IRBuilder {
-  /** Graph node id recorded on newly created instructions. */
-  origin: string | undefined
-
   private instrs: IRInstr[] = []
   private cache = new Map<string, ValueId>()
 
@@ -83,7 +80,7 @@ export class IRBuilder {
   }
 
   /** Drop instructions not needed to compute `result`, and return the module. */
-  finish(result: ValueId, resultOrigin?: string): IRModule {
+  finish(result: ValueId): IRModule {
     const live = new Set<ValueId>([result])
     for (let i = this.instrs.length - 1; i >= 0; i--) {
       if (!live.has(i)) continue
@@ -91,7 +88,7 @@ export class IRBuilder {
       if (e.kind === 'op' || e.kind === 'construct') e.args.forEach((a) => live.add(a))
       else if (e.kind === 'swizzle') live.add(e.arg)
     }
-    return { instructions: this.instrs.filter((i) => live.has(i.id)), result, resultOrigin }
+    return { instructions: this.instrs.filter((i) => live.has(i.id)), result }
   }
 
   private emit(type: ValueType, expr: IRExpr): ValueId {
@@ -99,7 +96,7 @@ export class IRBuilder {
     const hit = this.cache.get(key)
     if (hit !== undefined) return hit
     const id = this.instrs.length
-    this.instrs.push({ id, type, expr, origin: this.origin })
+    this.instrs.push({ id, type, expr })
     this.cache.set(key, id)
     return id
   }

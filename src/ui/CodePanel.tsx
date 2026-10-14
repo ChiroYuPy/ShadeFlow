@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useDeferredValue, useMemo, useState, type ReactNode } from 'react'
 import { Check, Copy, X } from 'lucide-react'
-import { generateCodeLines, getNodeDef, SHADER_LANGUAGES, type IRModule, type ShaderLanguage } from '@/core'
-import { Button } from '@/components/ui/button'
+import { generateCode, SHADER_LANGUAGES, type IRModule, type ShaderLanguage } from '@/core'
 import { cn } from '@/lib/utils'
-import { useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
+import { PANEL_BUTTON, PANEL_HEADER } from './panel'
 
 const LANGUAGE_LABELS: Record<ShaderLanguage, string> = { glsl: 'GLSL', wgsl: 'WGSL', hlsl: 'HLSL' }
 
@@ -30,22 +29,19 @@ function highlight(line: string): ReactNode[] {
   return out
 }
 
+/** Stands for code not written yet. */
+const PENDING = 'pending' as const
+
 export default function CodePanel({ ir }: { ir: IRModule | null }) {
   const [copied, setCopied] = useState(false)
   const language = useUIStore((s) => s.codeLanguage)
-  const lines = useMemo(() => (ir ? generateCodeLines(ir, language) : null), [ir, language])
-  const code = useMemo(() => lines?.map((l) => l.text).join('\n') ?? null, [lines])
-  const selected = useUIStore((s) => s.selected)
-  const nodes = useGraphStore((s) => s.graph.nodes)
-  const body = useRef<HTMLPreElement>(null)
-
-  // Selecting a node brings its code into view (nothing moves when it is already visible).
-  useEffect(() => {
-    body.current?.querySelector('[data-lit]')?.scrollIntoView({ block: 'nearest' })
-  }, [selected, lines])
+  // The panel opens at once, the code is written right after (and after each edit, without
+  // holding up the graph).
+  const shown = useDeferredValue<IRModule | null | typeof PENDING>(ir, PENDING)
+  const code = useMemo(() => (shown === PENDING ? PENDING : shown ? generateCode(shown, language) : null), [shown, language])
 
   const copy = async () => {
-    if (!code) return
+    if (code === PENDING || code === null) return
     try {
       await navigator.clipboard.writeText(code)
     } catch {
@@ -58,9 +54,9 @@ export default function CodePanel({ ir }: { ir: IRModule | null }) {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card/90 shadow-lg backdrop-blur">
-      <div className="flex items-center justify-between border-b px-3 py-1.5">
-        <div className="flex gap-0.5" role="tablist" aria-label="Shading language">
+    <div className="panel flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className={PANEL_HEADER}>
+        <div className="flex flex-1 gap-0.5" role="tablist" aria-label="Shading language">
           {SHADER_LANGUAGES.map((l) => (
             <button
               key={l}
@@ -68,7 +64,7 @@ export default function CodePanel({ ir }: { ir: IRModule | null }) {
               aria-selected={l === language}
               onClick={() => useUIStore.getState().setCodeLanguage(l)}
               className={cn(
-                'rounded-md px-2 py-1 text-sm',
+                'h-10 rounded-lg px-2.5 text-sm sm:h-8',
                 l === language ? 'bg-accent font-medium' : 'text-muted-foreground hover:text-foreground',
               )}
             >
@@ -76,43 +72,26 @@ export default function CodePanel({ ir }: { ir: IRModule | null }) {
             </button>
           ))}
         </div>
-        <div className="flex gap-1">
-          <Button variant="ghost" size="icon-sm" aria-label="Copy code" title="Copy code" onClick={copy} disabled={!code}>
-            {copied ? <Check /> : <Copy />}
-          </Button>
-          <Button variant="ghost" size="icon-sm" aria-label="Close" title="Close" onClick={() => useUIStore.getState().toggleCode()}>
-            <X />
-          </Button>
-        </div>
+        <button type="button" className={PANEL_BUTTON} aria-label="Copy code" title="Copy code" onClick={copy} disabled={code === PENDING || code === null}>
+          {copied ? <Check /> : <Copy />}
+        </button>
+        <button type="button" className={PANEL_BUTTON} aria-label="Close" title="Close" onClick={() => useUIStore.getState().toggleCode()}>
+          <X />
+        </button>
       </div>
-      <pre ref={body} className="flex-1 overflow-y-auto p-3 font-mono text-xs leading-relaxed break-words whitespace-pre-wrap">
-        {lines === null ? (
+      <pre className="flex-1 overflow-y-auto p-3 font-mono text-xs leading-relaxed break-words whitespace-pre-wrap">
+        {code === PENDING ? (
+          <span className="text-muted-foreground">Generating code…</span>
+        ) : code === null ? (
           <span className="text-muted-foreground">The graph has an error, see the highlighted node.</span>
         ) : (
-          lines.map(({ text, nodeId }, i) => {
-            // A line produced by a node is linked to it: selecting the node lights the line up,
-            // and clicking the line selects the node.
-            const node = nodeId === undefined ? undefined : nodes[nodeId]
-            const label = node && getNodeDef(node.type)?.label
-            return (
-              <div
-                key={i}
-                title={label ? `From the ${label} node` : undefined}
-                data-lit={node && selected.has(node.id) ? '' : undefined}
-                // Indentation is padding, so a wrapped long line stays aligned under its start.
-                style={{ paddingLeft: `calc(0.75rem + ${text.length - text.trimStart().length}ch)` }}
-                className={cn(
-                  '-mx-3 border-l-2 border-transparent pr-3',
-                  node && 'cursor-pointer hover:bg-accent/40',
-                  node && selected.has(node.id) && 'border-selection bg-selection/10',
-                )}
-                onClick={node ? () => useUIStore.getState().setSelection([node.id]) : undefined}
-              >
-                {highlight(text.trimStart())}
-                {text === '' && ' '}
-              </div>
-            )
-          })
+          code.split('\n').map((text, i) => (
+            // Indentation is padding, so a wrapped long line stays aligned under its start.
+            <div key={i} style={{ paddingLeft: `${text.length - text.trimStart().length}ch` }}>
+              {highlight(text.trimStart())}
+              {text === '' && ' '}
+            </div>
+          ))
         )}
       </pre>
     </div>

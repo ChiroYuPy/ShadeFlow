@@ -1,5 +1,4 @@
 import {
-  compatiblePort,
   compileGraph,
   concreteType,
   evaluate,
@@ -75,11 +74,13 @@ class PreviewHub {
   /** Keyed by `nodeId:port`. */
   private analyses = new Map<string, Analysis>()
   private genTypes: Record<string, ValueType> | null = null
-  /** Tiny stand-alone graphs previewed outside the project (the node palette). */
+  /** Stand-alone graphs previewed outside the project (the examples panel). */
   private sandboxes = new Map<string, Graph>()
   private programs = new Map<string, Program | null>()
   private listeners = new Set<() => void>()
   private frame = 0
+  /** Until then (`performance.now()`), pictures are not redrawn: see `hold`. */
+  private heldUntil = 0
   private gl: WebGL2RenderingContext | null = null
   private vertex: WebGLShader | null = null
   private observer: IntersectionObserver | null = null
@@ -101,26 +102,6 @@ class PreviewHub {
     return () => {
       this.listeners.delete(listener)
     }
-  }
-
-  /**
-   * Id under which a preview of a node *type* (not a node of the project) can be registered.
-   * Its inputs keep their defaults, except the first one that accepts it gets the UV, so the
-   * preview shows what the node does to a gradient.
-   */
-  sandboxId(type: string): string {
-    const id = `sandbox:${type}`
-    if (!this.sandboxes.has(id)) {
-      const uv = { id: 'uv', type: 'uv', position: { x: 0, y: 0 }, values: {} }
-      const node = { id, type, position: { x: 0, y: 0 }, values: {} }
-      const graph: Graph = { nodes: { uv, [id]: node }, edges: [] }
-      const port = compatiblePort(graph, { nodeId: 'uv', port: 'uv', direction: 'from' }, type)
-      if (port && type !== 'uv') {
-        graph.edges.push({ id: 'wire', from: { nodeId: 'uv', port: 'uv' }, to: { nodeId: id, port } })
-      }
-      this.sandboxes.set(id, graph)
-    }
-    return id
   }
 
   /**
@@ -239,11 +220,20 @@ class PreviewHub {
 
   // ── Frame loop ───────────────────────────────────────────────────────
 
+  /**
+   * Stops redrawing the pictures for a moment, while a panel slides in or out: redrawing many
+   * animated previews each frame would take the time the animation needs to stay smooth.
+   */
+  hold(ms: number) {
+    this.heldUntil = Math.max(this.heldUntil, performance.now() + ms)
+  }
+
   private start() {
     if (this.frame) return
     const tick = () => {
-      const time = performance.now() / 1000
-      this.drawImages(time)
+      const now = performance.now()
+      const time = now / 1000
+      if (now >= this.heldUntil) this.drawImages(time)
       this.updateValues(time)
       this.frame = requestAnimationFrame(tick)
     }

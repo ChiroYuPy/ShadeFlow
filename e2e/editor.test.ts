@@ -505,7 +505,15 @@ describe('view', () => {
     const box = (await (await app.header('Fract')).boundingBox())!
     expect(Math.abs(box.x + box.width / 2 - 700)).toBeLessThan(60)
 
-    // select all, then frame: back to the whole graph
+    // Shift+F: the whole graph, whatever is selected
+    await app.key('F', ['Shift'])
+    await app.sleep(500)
+    expect(await zoomLevel()).toBeCloseTo(all, 2)
+
+    // select all, then frame: the whole graph too
+    await app.clickNode('Fract')
+    await app.key('f')
+    await app.sleep(500)
     await app.key('a', ['Control'])
     await app.key('f')
     await app.sleep(500)

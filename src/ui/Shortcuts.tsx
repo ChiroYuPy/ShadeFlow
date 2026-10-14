@@ -9,6 +9,7 @@ import {
   pasteCopied,
   pasteText,
   saveProjectFile,
+  chooseProjectFile,
   selectAll,
   toggleSelectionFold,
   toggleSelectionPreviews,
@@ -84,7 +85,7 @@ export function Shortcuts() {
           e.preventDefault()
           ui.openPalette()
         } else if (key === 'v') ui.setTool(ui.tool === 'select' ? 'pan' : 'select')
-        else if (key === 'f') fit()
+        else if (key === 'f') fit(e.shiftKey)
         else if (key === 'r') ui.toggleResult()
         else if (key === 'c') ui.toggleCode()
         else if (key === 'p') toggleSelectionPreviews()
@@ -104,6 +105,9 @@ export function Shortcuts() {
       } else if (key === 's') {
         e.preventDefault() // the browser would save the page
         saveProjectFile()
+      } else if (key === 'o') {
+        e.preventDefault() // the browser would open a file itself
+        chooseProjectFile(() => setTimeout(() => fit(true), 120))
       } else if (typing && !isNumberField(e.target)) {
         return // text fields keep their own select all, clipboard and undo
       } else if (key === 'z') {

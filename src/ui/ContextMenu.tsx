@@ -61,7 +61,7 @@ export function ContextMenu() {
       <DropdownMenuContent className="w-56" onCloseAutoFocus={(e) => e.preventDefault()}>
         {menu.target === 'pane' && (
           <>
-            <Item icon={<Plus />} onSelect={() => useUIStore.getState().openPalette(menu.at)}>
+            <Item icon={<Plus />} shortcut="Tab" onSelect={() => useUIStore.getState().openPalette(menu.at)}>
               Add a node here
             </Item>
             <Item icon={<ClipboardPaste />} shortcut="Ctrl+V" onSelect={() => void pasteFromClipboard()}>
@@ -71,7 +71,7 @@ export function ContextMenu() {
             <Item icon={<BoxSelect />} shortcut="Ctrl+A" onSelect={selectAll}>
               Select all
             </Item>
-            <Item icon={<Scan />} onSelect={() => fit(true)}>
+            <Item icon={<Scan />} shortcut="Shift+F" onSelect={() => fit(true)}>
               Fit everything
             </Item>
           </>

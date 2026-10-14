@@ -75,7 +75,7 @@ export default function CodePanel({ ir }: { ir: IRModule | null }) {
         <button type="button" className={PANEL_BUTTON} aria-label="Copy code" title="Copy code" onClick={copy} disabled={code === PENDING || code === null}>
           {copied ? <Check /> : <Copy />}
         </button>
-        <button type="button" className={PANEL_BUTTON} aria-label="Close" title="Close" onClick={() => useUIStore.getState().toggleCode()}>
+        <button type="button" className={PANEL_BUTTON} aria-label="Close" title="Close (C)" onClick={() => useUIStore.getState().toggleCode()}>
           <X />
         </button>
       </div>

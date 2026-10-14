@@ -1,4 +1,4 @@
-import { useMemo, useRef, type ComponentProps } from 'react'
+import { useMemo, type ComponentProps } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useStore } from 'zustand'
 import {
@@ -35,13 +35,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import {
+  chooseProjectFile,
   confirmReplace,
   copyToClipboard,
   deleteSelection,
   describeSelection,
   duplicateSelection,
   newProject,
-  openProjectFile,
   saveProjectFile,
   toggleSelectionFold,
   toggleSelectionPreviews,
@@ -80,7 +80,6 @@ function ProjectBar() {
   const { fitView } = useReactFlow()
   const canUndo = useStore(useGraphStore.temporal, (s) => s.pastStates.length > 0)
   const canRedo = useStore(useGraphStore.temporal, (s) => s.futureStates.length > 0)
-  const fileInput = useRef<HTMLInputElement>(null)
   const codeOpen = useUIStore((s) => s.codeOpen)
   const resultOpen = useUIStore((s) => s.resultOpen)
 
@@ -111,8 +110,9 @@ function ProjectBar() {
             <BookOpen /> Examples…
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => confirmReplace('Open a project file?', () => fileInput.current?.click())}>
+          <DropdownMenuItem onSelect={() => chooseProjectFile(fitSoon)}>
             <Upload /> Open file…
+            <Shortcut>Ctrl+O</Shortcut>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={saveProjectFile}>
             <Download /> Save to file
@@ -121,6 +121,7 @@ function ProjectBar() {
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={fitAll}>
             <Scan /> Fit everything
+            <Shortcut>Shift+F</Shortcut>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => useUIStore.getState().toggleResult()}>
             <Monitor /> Result preview
@@ -139,17 +140,6 @@ function ProjectBar() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <input
-        ref={fileInput}
-        type="file"
-        accept=".json,application/json"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (file) void openProjectFile(file).then(fitSoon)
-          e.target.value = ''
-        }}
-      />
       <Divider />
       <Tool label="Undo" shortcut="Ctrl+Z" disabled={!canUndo} onClick={undo}>
         <Undo2 />

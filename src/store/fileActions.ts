@@ -53,6 +53,20 @@ export async function openProjectFile(file: File) {
   }
 }
 
+/** Asks first if needed, then lets the user pick a project file and opens it; `opened` runs after. */
+export function chooseProjectFile(opened: () => void) {
+  confirmReplace('Open a project file?', () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json,application/json'
+    input.onchange = () => {
+      const file = input.files?.[0]
+      if (file) void openProjectFile(file).then(opened)
+    }
+    input.click()
+  })
+}
+
 /** Delete the selected nodes and wires (the Output node is kept). */
 export function deleteSelection() {
   const ui = useUIStore.getState()

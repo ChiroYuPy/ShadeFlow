@@ -15,8 +15,8 @@ interface PreviewProps {
   error: string
 }
 
-function PanelButton({ label, ...props }: ComponentProps<typeof Button> & { label: string }) {
-  return <Button variant="ghost" size="icon-sm" aria-label={label} title={label} {...props} />
+function PanelButton({ label, shortcut, ...props }: ComponentProps<typeof Button> & { label: string; shortcut?: string }) {
+  return <Button variant="ghost" size="icon-sm" aria-label={label} title={shortcut ? `${label} (${shortcut})` : label} {...props} />
 }
 
 /**
@@ -59,7 +59,7 @@ export function Preview({ code, onStatus, error }: PreviewProps) {
           <PanelButton label="Fullscreen" onClick={() => setFullscreen(true)}>
             <Expand />
           </PanelButton>
-          <PanelButton label="Hide the result" onClick={() => useUIStore.getState().toggleResult()}>
+          <PanelButton label="Hide the result" shortcut="R" onClick={() => useUIStore.getState().toggleResult()}>
             <X />
           </PanelButton>
         </div>

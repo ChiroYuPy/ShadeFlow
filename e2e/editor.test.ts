@@ -292,10 +292,15 @@ describe('toolbar', () => {
   it('shows and hides the result', async () => {
     const shown = () => app.page.evaluate(() => document.querySelector('[data-result]') !== null)
     expect(await shown()).toBe(true)
-    await app.page.click('button[aria-label="Result preview"]')
+    const toggle = async () => {
+      await app.page.click('button[aria-label="Project menu"]')
+      await app.sleep(200)
+      await app.clickMenuItem('Result preview')
+    }
+    await toggle()
     await app.sleep(400) // it slides away first
     expect(await shown()).toBe(false)
-    await app.page.click('button[aria-label="Result preview"]')
+    await toggle()
     await app.sleep(400)
     expect(await shown()).toBe(true)
   })
@@ -421,35 +426,78 @@ describe('editing', () => {
 })
 
 describe('view', () => {
-  it('zooms with the buttons and fits the graph', async () => {
-    const start = await zoomLevel()
-    await app.page.click('button[aria-label="Zoom in"]')
-    await app.sleep(400)
-    const zoomedIn = await zoomLevel()
-    expect(zoomedIn).toBeGreaterThan(start)
-    await app.page.click('button[aria-label="Zoom out"]')
-    await app.page.click('button[aria-label="Zoom out"]')
+  it('frames the selection with F, or everything when nothing is selected', async () => {
+    await app.key('f')
     await app.sleep(500)
-    expect(await zoomLevel()).toBeLessThan(start)
-    await app.page.click('button[aria-label^="Fit graph in view"]')
-    await app.sleep(700)
-    expect(await zoomLevel()).toBeGreaterThan(0.4)
+    const all = await zoomLevel()
+
+    // one node: centered, zoomed in (but not much)
+    await app.clickNode('Fract')
+    await app.key('f')
+    await app.sleep(500)
+    expect(await zoomLevel()).toBeGreaterThan(all)
+    expect(await zoomLevel()).toBeLessThanOrEqual(1.25)
+    const box = (await (await app.header('Fract')).boundingBox())!
+    expect(Math.abs(box.x + box.width / 2 - 700)).toBeLessThan(60)
+
+    // select all, then frame: back to the whole graph
+    await app.key('a', ['Control'])
+    await app.key('f')
+    await app.sleep(500)
+    expect(await zoomLevel()).toBeCloseTo(all, 2)
   })
 
-  it('switches between the move and select tools with V and H', async () => {
-    const pressed = (label: string) =>
-      app.page.$eval(`button[aria-label^="${label}"]`, (b) => b.getAttribute('aria-pressed'))
-    expect(await pressed('Move the view')).toBe('true')
+  it('switches between the move and select tools with V', async () => {
+    const pannable = () => app.page.$eval('.react-flow__pane', (p) => p.classList.contains('draggable'))
+    expect(await pannable()).toBe(true)
     await app.key('v')
-    expect(await pressed('Select')).toBe('true')
+    expect(await pannable()).toBe(false)
+    await app.key('v')
+    expect(await pannable()).toBe(true)
+  })
+
+  it('has a key for every panel and for zooming', async () => {
+    const present = (sel: string) => app.page.evaluate((s) => document.querySelector(s) !== null, sel)
+    await app.key('r')
+    await app.sleep(400)
+    expect(await present('[data-result]')).toBe(false)
+    await app.key('r')
+    await app.key('c')
+    await app.sleep(400)
+    expect(await present('[data-result]')).toBe(true)
+    expect(await app.page.evaluate(() => document.querySelector('pre')?.textContent ?? '')).toContain('void main()')
+    await app.key('c')
+
+    const start = await zoomLevel()
+    await app.key('=')
+    await app.sleep(300)
+    expect(await zoomLevel()).toBeGreaterThan(start)
+    await app.key('-')
+    await app.key('-')
+    await app.sleep(300)
+    expect(await zoomLevel()).toBeLessThan(start)
+  })
+
+  it('hides the previews and folds the selection with P and H', async () => {
+    const canvases = () => app.page.evaluate(() => document.querySelectorAll('.react-flow__node canvas').length)
+    const before = await canvases()
+    await app.clickNode('Fract')
+    await app.key('p')
+    await app.sleep(200)
+    expect(await canvases()).toBe(before - 1)
     await app.key('h')
-    expect(await pressed('Move the view')).toBe('true')
+    await app.sleep(200)
+    await app.rightClickNode('Fract')
+    expect(await app.menuItems()).toEqual(expect.arrayContaining([expect.stringContaining('Unfold')]))
+    await app.key('Escape')
   })
 })
 
 describe('code panel', () => {
   it('shows the generated code, in each language', async () => {
-    await app.page.click('button[aria-label="Generated code"]')
+    await app.page.click('button[aria-label="Project menu"]')
+    await app.sleep(200)
+    await app.clickMenuItem('Generated code')
     await app.sleep(500)
     const code = () => app.page.evaluate(() => document.querySelector('pre')?.textContent ?? '')
     expect(await code()).toContain('void main()')
@@ -467,6 +515,25 @@ describe('touch screens', () => {
 
   const position = (title: string) =>
     app.header(title).then((h) => h.boundingBox()).then((b) => ({ x: Math.round(b!.x), y: Math.round(b!.y) }))
+
+  it('selects an area with one finger, once armed from the selection bar', async () => {
+    await app.page.setViewport({ width: 390, height: 800, isMobile: true, hasTouch: true })
+    await app.reload()
+    const selectedCount = () => app.page.evaluate(() => document.querySelectorAll('.react-flow__node.selected').length)
+    const start = await position('Fract')
+    await app.page.touchscreen.tap(start.x + 30, start.y + 10)
+    await app.sleep(400)
+    await app.page.tap('button[aria-label^="Select an area"]')
+    await app.sleep(100)
+    // a rectangle over most of the screen, from an empty spot in the bottom left
+    await app.page.touchscreen.touchStart(10, 720)
+    for (const [x, y] of [[100, 600], [250, 400], [380, 200]]) await app.page.touchscreen.touchMove(x, y)
+    await app.page.touchscreen.touchEnd()
+    await app.sleep(300)
+    expect(await selectedCount()).toBeGreaterThan(1)
+    // armed for one drag only: a finger moves the view again
+    expect(await app.page.$eval('.react-flow__pane', (p) => p.classList.contains('draggable'))).toBe(true)
+  })
 
   it('edits a value only once the node is selected', async () => {
     await app.page.setViewport({ width: 390, height: 800, isMobile: true, hasTouch: true })

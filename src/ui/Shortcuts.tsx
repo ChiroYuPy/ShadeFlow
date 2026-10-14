@@ -10,10 +10,12 @@ import {
   pasteText,
   saveProjectFile,
   selectAll,
+  toggleSelectionFold,
+  toggleSelectionPreviews,
 } from '@/store/fileActions'
 import { redo, undo } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
-import { FIT_VIEW } from './view'
+import { useFit } from './view'
 
 function isTyping(target: EventTarget | null) {
   return target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
@@ -40,7 +42,8 @@ const PASTE_EVENT_MS = 150
 
 /** Keyboard shortcuts of the editor. Renders nothing. */
 export function Shortcuts() {
-  const { fitView } = useReactFlow()
+  const fit = useFit()
+  const { zoomIn, zoomOut } = useReactFlow()
 
   useEffect(() => {
     let pasteFallback: ReturnType<typeof setTimeout> | undefined
@@ -64,9 +67,14 @@ export function Shortcuts() {
         if (key === 'a' && e.shiftKey) {
           e.preventDefault()
           ui.openPalette()
-        } else if (e.key === 'v') ui.setTool('select')
-        else if (e.key === 'h') ui.setTool('pan')
-        else if (e.key === 'f') void fitView(FIT_VIEW)
+        } else if (key === 'v') ui.setTool(ui.tool === 'select' ? 'pan' : 'select')
+        else if (key === 'f') fit()
+        else if (key === 'r') ui.toggleResult()
+        else if (key === 'c') ui.toggleCode()
+        else if (key === 'p') toggleSelectionPreviews()
+        else if (key === 'h') toggleSelectionFold()
+        else if (e.key === '+' || e.key === '=') void zoomIn({ duration: 150 })
+        else if (e.key === '-') void zoomOut({ duration: 150 })
         else if (e.key === '?') ui.setHelpOpen(true)
         return
       }
@@ -147,7 +155,7 @@ export function Shortcuts() {
       document.removeEventListener('cut', onCut)
       document.removeEventListener('paste', onPaste)
     }
-  }, [fitView])
+  }, [fit, zoomIn, zoomOut])
 
   return null
 }

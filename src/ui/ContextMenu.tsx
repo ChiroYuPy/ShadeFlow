@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { BoxSelect, ClipboardPaste, Copy, CopyPlus, Eye, EyeOff, FoldVertical, Plus, RotateCcw, Scissors, Trash2, UnfoldVertical } from 'lucide-react'
+import { BoxSelect, ClipboardPaste, Copy, CopyPlus, Eye, EyeOff, FoldVertical, Plus, RotateCcw, Scan, Scissors, Trash2, UnfoldVertical } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,7 @@ import {
 } from '@/store/fileActions'
 import { useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
+import { useFit } from './view'
 
 function Item({ icon, shortcut, children, ...props }: {
   icon: ReactNode
@@ -43,6 +44,7 @@ export function ContextMenu() {
   const menu = useUIStore((s) => s.contextMenu)
   const selected = useUIStore((s) => s.selected)
   const graph = useGraphStore((s) => s.graph)
+  const fit = useFit()
   if (!menu) return null
 
   const store = useGraphStore.getState()
@@ -69,14 +71,21 @@ export function ContextMenu() {
             <Item icon={<BoxSelect />} shortcut="Ctrl+A" onSelect={selectAll}>
               Select all
             </Item>
+            <Item icon={<Scan />} onSelect={() => fit(true)}>
+              Fit everything
+            </Item>
           </>
         )}
 
         {menu.target === 'node' && (
           <>
+            <Item icon={<Scan />} shortcut="F" onSelect={() => fit()}>
+              Frame
+            </Item>
             {previewable.length > 0 && (
               <Item
                 icon={showPreviews ? <Eye /> : <EyeOff />}
+                shortcut="P"
                 onSelect={toggleSelectionPreviews}
               >
                 {showPreviews ? 'Show preview' : 'Hide preview'}
@@ -85,6 +94,7 @@ export function ContextMenu() {
             {nodes.length > 0 && (
               <Item
                 icon={fold ? <FoldVertical /> : <UnfoldVertical />}
+                shortcut="H"
                 onSelect={toggleSelectionFold}
               >
                 {fold ? 'Fold' : 'Unfold'}

@@ -184,6 +184,7 @@ function asOneStep(run: () => void) {
 
 export function toggleSelectionPreviews() {
   const { previewable, showPreviews } = currentSelection()
+  if (previewable.length === 0) return
   const store = useGraphStore.getState()
   asOneStep(() => {
     for (const n of previewable) if ((n.showPreview === true) !== showPreviews) store.togglePreview(n.id)
@@ -192,6 +193,7 @@ export function toggleSelectionPreviews() {
 
 export function toggleSelectionFold() {
   const { nodes, fold } = currentSelection()
+  if (nodes.length === 0) return
   const store = useGraphStore.getState()
   asOneStep(() => {
     for (const n of nodes) if ((n.collapsed === true) !== fold) store.toggleCollapsed(n.id)

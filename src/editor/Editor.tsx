@@ -232,6 +232,10 @@ export function Editor({ errors }: EditorProps) {
       // (React Flow only starts a touch selection when one-finger panning is off).
       selectionOnDrag={selectTool}
       panOnDrag={!selectTool}
+      // On a touch screen the rectangle is armed for one drag (selection bar): then the finger moves the view again.
+      onSelectionEnd={() => {
+        if (selectTool && window.matchMedia('(pointer: coarse)').matches) useUIStore.getState().setTool('pan')
+      }}
       selectionMode={SelectionMode.Partial}
       onConnectEnd={onConnectEnd}
       onReconnect={onReconnect}

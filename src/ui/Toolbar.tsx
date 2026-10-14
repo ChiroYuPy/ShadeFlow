@@ -50,7 +50,7 @@ import { redo, undo, useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
 import { Presence } from './Presence'
 import { useLast } from './useLast'
-import { FIT_VIEW, useFit } from './view'
+import { FIT_VIEW, useFit, useFrameLabel } from './view'
 
 const BAR = 'panel absolute flex items-center gap-1 p-1'
 
@@ -85,7 +85,8 @@ function ProjectBar() {
 
   // A new project replaces the whole graph: bring it into view once it is measured.
   const fitSoon = () => setTimeout(() => void fitView(FIT_VIEW), 120)
-  const fitAll = () => void fitView(FIT_VIEW)
+  const fit = useFit()
+  const frameLabel = useFrameLabel()
 
   return (
     <div className={cn(BAR, 'top-3 left-3 sm:top-4 sm:left-4')}>
@@ -119,9 +120,9 @@ function ProjectBar() {
             <Shortcut>Ctrl+S</Shortcut>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={fitAll}>
-            <Scan /> Fit everything
-            <Shortcut>Shift+F</Shortcut>
+          <DropdownMenuItem onSelect={() => fit()}>
+            <Scan /> {frameLabel}
+            <Shortcut>F</Shortcut>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => useUIStore.getState().toggleResult()}>
             <Monitor /> Result preview

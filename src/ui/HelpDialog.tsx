@@ -56,7 +56,6 @@ const SECTIONS: { title: string; items: Gesture[] }[] = [
       { keys: [MOD, 'Shift', 'Z'], does: 'Redo' },
       { keys: ['Scroll'], or: [['+', '−']], does: 'Zoom' },
       { keys: ['F'], does: 'Frame the selection, or the whole graph when nothing is selected' },
-      { keys: ['Shift', 'F'], does: 'Fit the whole graph in view' },
       { keys: ['R'], does: 'Show or hide the result' },
       { keys: ['C'], does: 'Show or hide the generated code' },
       { keys: [MOD, 'S'], does: 'Save the project to a file' },

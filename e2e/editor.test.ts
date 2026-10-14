@@ -271,6 +271,13 @@ describe('keyboard', () => {
     await app.page.keyboard.press('Tab')
     await app.page.waitForSelector('[data-palette]')
     await app.sleep(250)
+    // Tab again closes it, and opens it once more
+    await app.page.keyboard.press('Tab')
+    await app.sleep(400)
+    expect(await app.page.$('[data-palette]')).toBeNull()
+    await app.page.keyboard.press('Tab')
+    await app.page.waitForSelector('[data-palette]')
+    await app.sleep(250)
     await app.page.keyboard.type('voronoi')
     await app.sleep(150)
     await app.page.keyboard.press('Enter')
@@ -505,15 +512,7 @@ describe('view', () => {
     const box = (await (await app.header('Fract')).boundingBox())!
     expect(Math.abs(box.x + box.width / 2 - 700)).toBeLessThan(60)
 
-    // Shift+F: the whole graph, whatever is selected
-    await app.key('F', ['Shift'])
-    await app.sleep(500)
-    expect(await zoomLevel()).toBeCloseTo(all, 2)
-
-    // select all, then frame: the whole graph too
-    await app.clickNode('Fract')
-    await app.key('f')
-    await app.sleep(500)
+    // select all, then frame: the whole graph again
     await app.key('a', ['Control'])
     await app.key('f')
     await app.sleep(500)

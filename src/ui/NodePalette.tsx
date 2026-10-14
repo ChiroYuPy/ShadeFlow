@@ -173,6 +173,12 @@ function PaletteBody() {
   }
 
   const onKeyDown = (e: KeyboardEvent) => {
+    // Tab opened it, Tab closes it.
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      close()
+      return
+    }
     if (e.key === 'Enter') {
       e.preventDefault()
       if (current) add(current.type)

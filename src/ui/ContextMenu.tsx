@@ -20,7 +20,7 @@ import {
 } from '@/store/fileActions'
 import { useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
-import { useFit } from './view'
+import { useFit, useFrameLabel } from './view'
 
 function Item({ icon, shortcut, children, ...props }: {
   icon: ReactNode
@@ -45,6 +45,7 @@ export function ContextMenu() {
   const selected = useUIStore((s) => s.selected)
   const graph = useGraphStore((s) => s.graph)
   const fit = useFit()
+  const frameLabel = useFrameLabel()
   if (!menu) return null
 
   const store = useGraphStore.getState()
@@ -71,8 +72,8 @@ export function ContextMenu() {
             <Item icon={<BoxSelect />} shortcut="Ctrl+A" onSelect={selectAll}>
               Select all
             </Item>
-            <Item icon={<Scan />} shortcut="Shift+F" onSelect={() => fit(true)}>
-              Fit everything
+            <Item icon={<Scan />} shortcut="F" onSelect={() => fit()}>
+              {frameLabel}
             </Item>
           </>
         )}

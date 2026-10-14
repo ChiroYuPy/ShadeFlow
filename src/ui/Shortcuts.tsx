@@ -85,7 +85,7 @@ export function Shortcuts() {
           e.preventDefault()
           ui.openPalette()
         } else if (key === 'v') ui.setTool(ui.tool === 'select' ? 'pan' : 'select')
-        else if (key === 'f') fit(e.shiftKey)
+        else if (key === 'f') fit()
         else if (key === 'r') ui.toggleResult()
         else if (key === 'c') ui.toggleCode()
         else if (key === 'p') toggleSelectionPreviews()

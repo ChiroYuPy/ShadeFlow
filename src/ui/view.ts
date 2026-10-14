@@ -22,9 +22,14 @@ function framedNodes(): { id: string }[] | undefined {
 
 /**
  * Frames the selection, or the whole graph when nothing is selected (Ctrl+A then F: see it all).
- * `everything` frames the whole graph whatever is selected.
+ * `everything` frames the whole graph whatever is selected (after opening a project).
  */
 export function useFit() {
   const { fitView } = useReactFlow()
   return useCallback((everything = false) => void fitView({ ...FIT_VIEW, nodes: everything ? undefined : framedNodes() }), [fitView])
+}
+
+/** What F does right now, for the menus: frame the selection, or everything when nothing is selected. */
+export function useFrameLabel() {
+  return useUIStore((s) => s.selected.size > 0) ? 'Frame the selection' : 'Frame everything'
 }

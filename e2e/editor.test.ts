@@ -426,29 +426,55 @@ describe('editing', () => {
 })
 
 describe('color ramp', () => {
+  const stops = () => app.page.$$eval('[data-ramp-stop]', (b) => b.map((e) => e.getAttribute('aria-label')))
+  const selectedStops = () => app.page.$$eval('[data-ramp-stop][aria-pressed=true]', (b) => b.length)
+
   it('adds a color where the bar is clicked, moves it by dragging, and removes it', async () => {
     await app.addNode('Color Ramp')
     await app.sleep(300) // the palette finishes leaving
-    const stops = () => app.page.$$eval('[data-ramp-stop]', (b) => b.map((e) => e.getAttribute('aria-label')))
-    expect(await stops()).toEqual(['Color stop at 0', 'Color stop at 1'])
+    expect(await stops()).toEqual(['Color at 0', 'Color at 1'])
+    expect(await selectedStops()).toBe(0)
 
     const bar = (await (await app.page.$('[data-ramp-bar]'))!.boundingBox())!
     await app.page.mouse.click(bar.x + bar.width / 2, bar.y + bar.height / 2)
     await app.sleep(100)
     expect(await stops()).toHaveLength(3)
+    expect(await selectedStops()).toBe(1)
 
-    // drag the new stop (the selected one) to the right
+    // drag the new color (the selected one) to the right
     const middle = (await (await app.page.$('[data-ramp-stop][aria-pressed=true]'))!.boundingBox())!
     await app.page.mouse.move(middle.x + middle.width / 2, middle.y + middle.height / 2)
     await app.page.mouse.down()
     await app.page.mouse.move(bar.x + bar.width * 0.75, middle.y + middle.height / 2, { steps: 5 })
     await app.page.mouse.up()
     const moved = await stops()
-    expect(Number(moved[1]!.replace('Color stop at ', ''))).toBeCloseTo(0.75, 1)
+    expect(Number(moved[1]!.replace('Color at ', ''))).toBeCloseTo(0.75, 1)
 
     await app.page.click('button[aria-label="Remove this color"]')
     await app.sleep(100)
     expect(await stops()).toHaveLength(2)
+  })
+
+  it('removes the selected color with Delete, not the node, and forgets it on a click elsewhere', async () => {
+    await app.addNode('Color Ramp')
+    await app.sleep(300)
+    const nodes = await app.nodeCount()
+    const bar = (await (await app.page.$('[data-ramp-bar]'))!.boundingBox())!
+    await app.page.mouse.click(bar.x + bar.width / 3, bar.y + bar.height / 2)
+    await app.sleep(100)
+    expect(await stops()).toHaveLength(3)
+    await app.key('Delete')
+    await app.sleep(100)
+    expect(await stops()).toHaveLength(2)
+    expect(await app.nodeCount()).toBe(nodes)
+
+    // select a color, then click the empty canvas: nothing stays selected
+    const first = (await (await app.page.$('[data-ramp-stop]'))!.boundingBox())!
+    await app.page.mouse.click(first.x + first.width / 2, first.y + first.height / 2)
+    expect(await selectedStops()).toBe(1)
+    await app.page.mouse.click(1300, 620)
+    await app.sleep(100)
+    expect(await selectedStops()).toBe(0)
   })
 })
 

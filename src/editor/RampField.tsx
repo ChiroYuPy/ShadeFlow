@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent } from 'react'
+import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { Trash2 } from 'lucide-react'
 import { MAX_RAMP_STOPS, MIN_RAMP_STOPS, readRamp, sampleRamp, writeRamp, type RampStop } from '@/core'
 import { cn } from '@/lib/utils'
@@ -9,14 +9,16 @@ const css = (c: readonly number[]) => `rgb(${c.map((v) => Math.round(v * 255)).j
 const round = (n: number) => Math.round(n * 1000) / 1000
 
 /**
- * The gradient of a Color Ramp: click the bar to add a stop, drag a stop to move it; the
- * selected stop's color, position and removal are below the bar.
+ * The gradient of a Color Ramp: click the bar to add a color, drag a color to move it, click one
+ * to edit it below the bar. A selected color is only selected while the field has the focus:
+ * clicking elsewhere or Escape drops it, Delete removes it (and not the node).
  */
 export function RampField({ value, onChange }: { value: number[]; onChange: (values: number[]) => void }) {
   const stops = readRamp(value)
-  const [selected, setSelected] = useState(0)
-  const current = Math.min(selected, stops.length - 1)
-  const bar = useRef<HTMLDivElement>(null)
+  const [selected, setSelected] = useState<number | null>(null)
+  const current = selected === null ? null : Math.min(selected, stops.length - 1)
+  const field = useRef<HTMLDivElement>(null)
+  const track = useRef<HTMLDivElement>(null)
   /** Index of the stop being dragged, kept up to date as it passes others. */
   const dragging = useRef<number | null>(null)
 
@@ -35,81 +37,121 @@ export function RampField({ value, onChange }: { value: number[]; onChange: (val
     commit(list, list[index])
   }
 
+  const remove = (index: number) => {
+    if (stops.length <= MIN_RAMP_STOPS) return
+    setSelected(null)
+    onChange(writeRamp(stops.filter((_, i) => i !== index)))
+  }
+
   const positionAt = (e: PointerEvent) => {
-    const rect = bar.current!.getBoundingClientRect()
+    const rect = track.current!.getBoundingClientRect()
     return round(Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)))
   }
 
-  const startDrag = (e: PointerEvent, index: number) => {
+  const grab = (e: PointerEvent, index: number) => {
     e.stopPropagation()
+    e.preventDefault() // keeps the focus where we put it
     e.currentTarget.setPointerCapture(e.pointerId)
     dragging.current = index
     setSelected(index)
+    field.current?.focus()
+  }
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    // The fields below keep their keys (Backspace edits the text).
+    if (current === null || e.target instanceof HTMLInputElement) return
+    if (e.key === 'Delete' || e.key === 'Backspace') remove(current)
+    else if (e.key === 'Escape') setSelected(null)
+    else return
+    e.preventDefault()
+    e.stopPropagation() // not the node, not the selection
   }
 
   const gradient = `linear-gradient(to right, ${stops.map((s) => `${css(s.color)} ${s.position * 100}%`).join(', ')})`
+  const stop = current === null ? null : stops[current]
 
   return (
     <div
-      className="nodrag nopan flex flex-col gap-1.5 px-3 pt-1 pb-2"
+      ref={field}
+      tabIndex={-1}
+      className="nodrag nopan flex flex-col gap-1 px-3 pt-1 pb-2 outline-none"
       style={{ touchAction: 'none' }}
+      onKeyDown={onKeyDown}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setSelected(null)
+      }}
       onPointerMove={(e) => {
         if (dragging.current !== null) update(dragging.current, { position: positionAt(e) })
       }}
       onPointerUp={() => (dragging.current = null)}
       onPointerCancel={() => (dragging.current = null)}
     >
-      <div
-        ref={bar}
-        data-ramp-bar=""
-        title="Click to add a color"
-        className={cn('h-5 rounded-md border', stops.length < MAX_RAMP_STOPS ? 'cursor-copy' : 'cursor-default')}
-        style={{ background: gradient }}
-        onPointerDown={(e) => {
-          if (stops.length >= MAX_RAMP_STOPS) return
-          // A new stop takes the color already there, so the gradient does not change until it is edited.
-          const position = positionAt(e)
-          const stop: RampStop = { position, color: sampleRamp(stops, position) }
-          const list = [...stops, stop]
-          const index = [...list].sort((a, b) => a.position - b.position).indexOf(stop)
-          startDrag(e, index)
-          commit(list, stop)
-        }}
-      />
-      <div className="relative h-3">
-        {stops.map((stop, i) => (
-          <button
-            key={i}
-            type="button"
-            data-ramp-stop=""
-            aria-label={`Color stop at ${stop.position}`}
-            aria-pressed={i === current}
+      {/* The bar and the colors share one track, inset by half a color so the ends sit on its edges. */}
+      <div className="px-1.5">
+        <div ref={track} className="relative">
+          <div
+            data-ramp-bar=""
+            title={stops.length < MAX_RAMP_STOPS ? 'Click to add a color' : undefined}
+            // The outline is drawn over the gradient, so it never shows past the rounded corners.
             className={cn(
-              'absolute top-0 size-3 -translate-x-1/2 cursor-ew-resize rounded-full border-2 border-foreground/70',
-              i === current && 'border-selection ring-2 ring-selection/40',
+              'h-4 rounded-[3px] shadow-[inset_0_0_0_1px_var(--border)]',
+              stops.length < MAX_RAMP_STOPS ? 'cursor-copy' : 'cursor-default',
             )}
-            style={{ left: `${stop.position * 100}%`, background: css(stop.color) }}
-            onPointerDown={(e) => startDrag(e, i)}
+            style={{ background: gradient }}
+            onPointerDown={(e) => {
+              if (stops.length >= MAX_RAMP_STOPS) return
+              // A new color takes the one already there: the gradient does not change until it is edited.
+              const position = positionAt(e)
+              const added: RampStop = { position, color: sampleRamp(stops, position) }
+              const list = [...stops, added]
+              grab(e, [...list].sort((a, b) => a.position - b.position).indexOf(added))
+              commit(list, added)
+            }}
           />
-        ))}
+          <div className="relative h-4">
+            {stops.map((s, i) => (
+              <button
+                key={i}
+                type="button"
+                tabIndex={-1}
+                data-ramp-stop=""
+                aria-label={`Color at ${s.position}`}
+                aria-pressed={i === current}
+                className={cn(
+                  // A short stem links the color to its place on the bar.
+                  'absolute top-1 size-3 -translate-x-1/2 cursor-ew-resize rounded-full transition-transform duration-100',
+                  'before:absolute before:bottom-full before:left-1/2 before:h-1 before:w-px before:-translate-x-1/2',
+                  i === current
+                    ? 'scale-125 shadow-[0_0_0_1.5px_var(--foreground)] before:bg-foreground'
+                    : 'shadow-[0_0_0_1px_var(--node-border),0_0_0_2.5px_var(--node)] before:bg-muted-foreground',
+                )}
+                style={{ left: `${s.position * 100}%`, background: css(s.color) }}
+                onPointerDown={(e) => grab(e, i)}
+              />
+            ))}
+          </div>
+        </div>
       </div>
-      <div className="flex items-center gap-1">
-        <ColorField value={stops[current].color} onChange={(c) => update(current, { color: [c[0], c[1], c[2]] })} />
-        <NumberField title="Position" value={stops[current].position} onChange={(n) => update(current, { position: Math.min(1, Math.max(0, n)) })} />
-        <button
-          type="button"
-          aria-label="Remove this color"
-          title="Remove this color"
-          disabled={stops.length <= MIN_RAMP_STOPS}
-          className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40 [&_svg]:size-3.5"
-          onClick={() => {
-            const list = stops.filter((_, i) => i !== current)
-            setSelected(Math.max(0, current - 1))
-            onChange(writeRamp(list))
-          }}
-        >
-          <Trash2 />
-        </button>
+      {/* The row keeps its height either way, so the node does not jump. */}
+      <div className="flex h-6 items-center gap-1">
+        {stop === null || current === null ? (
+          <span className="truncate text-xs text-muted-foreground">Click a color to edit it</span>
+        ) : (
+          <>
+            <ColorField value={stop.color} onChange={(c) => update(current, { color: [c[0], c[1], c[2]] })} />
+            <NumberField title="Position" value={stop.position} onChange={(n) => update(current, { position: Math.min(1, Math.max(0, n)) })} />
+            <button
+              type="button"
+              aria-label="Remove this color"
+              title="Remove this color (Delete)"
+              disabled={stops.length <= MIN_RAMP_STOPS}
+              className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40 [&_svg]:size-3.5"
+              onClick={() => remove(current)}
+            >
+              <Trash2 />
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

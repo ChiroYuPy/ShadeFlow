@@ -43,11 +43,15 @@
 
   /* Node categories: a thin tint on the node header */
   --color-cat-input: var(--cat-input);
+  --color-cat-math: var(--cat-math);
+  --color-cat-trigonometry: var(--cat-trigonometry);
+  --color-cat-round: var(--cat-round);
+  --color-cat-range: var(--cat-range);
+  --color-cat-interpolation: var(--cat-interpolation);
   --color-cat-vector: var(--cat-vector);
   --color-cat-uv: var(--cat-uv);
   --color-cat-procedural: var(--cat-procedural);
   --color-cat-color: var(--cat-color);
-  --color-cat-math: var(--cat-math);
   --color-cat-output: var(--cat-output);
 
   /* Port / wire colors, one per IR type */
@@ -99,13 +103,22 @@
   --node-header: oklch(0.25 0 0);
   --node-border: oklch(1 0 0 / 16%);
 
-  --cat-input: oklch(0.68 0.14 25);
-  --cat-vector: oklch(0.66 0.13 290);
-  --cat-uv: oklch(0.72 0.11 215);
-  --cat-procedural: oklch(0.72 0.14 335);
-  --cat-color: oklch(0.8 0.13 90);
-  --cat-math: oklch(0.7 0.12 165);
-  --cat-output: oklch(0.68 0.17 10);
+  /*
+   * One tint per node category (the icons, the palette headings), about equally bright, spread
+   * around the color wheel. The math families sit side by side (yellow-green to blue): related,
+   * yet each its own.
+   */
+  --cat-input: oklch(0.74 0.14 50);
+  --cat-math: oklch(0.74 0.12 160);
+  --cat-trigonometry: oklch(0.74 0.11 185);
+  --cat-round: oklch(0.76 0.13 135);
+  --cat-range: oklch(0.8 0.13 112);
+  --cat-interpolation: oklch(0.74 0.11 210);
+  --cat-vector: oklch(0.68 0.13 280);
+  --cat-uv: oklch(0.7 0.12 245);
+  --cat-procedural: oklch(0.72 0.15 330);
+  --cat-color: oklch(0.82 0.14 88);
+  --cat-output: oklch(0.68 0.18 20);
 
   --port-float: oklch(0.72 0.14 245);
   --port-vec2: oklch(0.78 0.14 150);

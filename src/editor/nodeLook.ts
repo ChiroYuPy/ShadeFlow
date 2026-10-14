@@ -106,12 +106,11 @@ export const nodeIcon = (type: string): LucideIcon => NODE_ICONS[type] ?? Box
 /** Text color of a category (defined in `index.css`); tints the node icons. */
 export const CATEGORY_TEXT: Record<NodeCategory, string> = {
   input: 'text-cat-input',
-  // The families of math nodes share one tint.
   math: 'text-cat-math',
-  trigonometry: 'text-cat-math',
-  round: 'text-cat-math',
-  range: 'text-cat-math',
-  interpolation: 'text-cat-math',
+  trigonometry: 'text-cat-trigonometry',
+  round: 'text-cat-round',
+  range: 'text-cat-range',
+  interpolation: 'text-cat-interpolation',
   vector: 'text-cat-vector',
   uv: 'text-cat-uv',
   procedural: 'text-cat-procedural',

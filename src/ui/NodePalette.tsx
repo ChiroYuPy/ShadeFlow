@@ -24,6 +24,8 @@ interface Entry {
 
 interface Section {
   heading?: string
+  /** Tailwind class tinting the heading: the category's color. */
+  tint?: string
   entries: Entry[]
 }
 
@@ -140,7 +142,7 @@ function PaletteBody() {
       .filter((d): d is NodeDef => !!d)
     if (recent.length) out.push({ heading: 'Recent', entries: recent.map((d) => entryOf(d, `recent:${d.type}`)) })
     for (const c of new Set(offered.map((d) => d.category))) {
-      out.push({ heading: CATEGORY_LABELS[c], entries: offered.filter((d) => d.category === c).map((d) => entryOf(d)) })
+      out.push({ heading: CATEGORY_LABELS[c], tint: CATEGORY_TEXT[c], entries: offered.filter((d) => d.category === c).map((d) => entryOf(d)) })
     }
     if (!anchor) out.push({ heading: 'Annotation', entries: [NOTE] })
     return out
@@ -218,7 +220,9 @@ function PaletteBody() {
         {found.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No node found.</p>}
         {sections.map((section, i) => (
           <div key={section.heading ?? i} role="group" aria-label={section.heading}>
-            {section.heading && <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground">{section.heading}</div>}
+            {section.heading && (
+              <div className={cn('px-2 pt-2 pb-1 text-xs font-medium', section.tint ?? 'text-muted-foreground')}>{section.heading}</div>
+            )}
             {section.entries.map((entry) => (
               <div key={entry.key}>
                 <div className={cn('flex items-center rounded-lg', entry === current && 'pointer-fine:bg-accent')}>

@@ -285,6 +285,22 @@ describe('keyboard', () => {
     expect(await app.nodeTitles()).toContain('Voronoi')
   })
 
+  it('adds the node under the mouse when Tab opened the palette', async () => {
+    const { width, height } = app.page.viewport()!
+    const spot = { x: Math.round(width * 0.3), y: Math.round(height * 0.75) }
+    await app.page.mouse.click(spot.x, spot.y)
+    await app.page.keyboard.press('Tab')
+    await app.page.waitForSelector('[data-palette]')
+    await app.sleep(250)
+    await app.page.keyboard.type('checker')
+    await app.sleep(150)
+    await app.page.keyboard.press('Enter')
+    await app.sleep(300)
+    const box = (await (await app.header('Checkerboard')).boundingBox())!
+    expect(Math.abs(box.x - spot.x)).toBeLessThan(30)
+    expect(Math.abs(box.y - spot.y)).toBeLessThan(30)
+  })
+
   it('moves the highlight with the arrows and adds with Enter', async () => {
     await app.openPalette()
     await app.page.keyboard.type('co')
@@ -364,6 +380,15 @@ describe('right-click menus', () => {
     expect(await app.menuItems()).toEqual(expect.arrayContaining([expect.stringContaining('Duplicate')]))
     await app.clickMenuItem('Duplicate')
     expect(await app.nodeCount()).toBe(before + 1)
+  })
+
+  it('tells what a node does', async () => {
+    await app.rightClickNode('Split')
+    await app.clickMenuItem('About this node')
+    await app.page.waitForSelector('[data-about]')
+    const text = await app.page.$eval('[data-about]', (e) => e.textContent ?? '')
+    expect(text).toContain('Split')
+    expect(text).toContain('Inputs')
   })
 
   it('deletes a wire', async () => {

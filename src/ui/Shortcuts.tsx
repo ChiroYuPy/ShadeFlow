@@ -16,6 +16,7 @@ import {
 } from '@/store/fileActions'
 import { redo, undo } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
+import { pointerOnCanvas } from './pointer'
 import { useFit } from './view'
 
 function isTyping(target: EventTarget | null) {
@@ -54,9 +55,14 @@ const PASTE_EVENT_MS = 150
 /** Keyboard shortcuts of the editor. Renders nothing. */
 export function Shortcuts() {
   const fit = useFit()
-  const { zoomIn, zoomOut } = useReactFlow()
+  const { zoomIn, zoomOut, screenToFlowPosition } = useReactFlow()
 
   useEffect(() => {
+    // A key adds the node under the mouse, if it is over the canvas (else in the middle of the view).
+    const addHere = () => {
+      const at = pointerOnCanvas()
+      useUIStore.getState().openPalette(at ? screenToFlowPosition(at) : undefined)
+    }
     let pasteFallback: ReturnType<typeof setTimeout> | undefined
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -76,14 +82,14 @@ export function Shortcuts() {
 
       if (e.key === 'Tab' && !mod && !e.altKey && !e.shiftKey && onCanvas(e.target)) {
         e.preventDefault()
-        ui.openPalette()
+        addHere()
         return
       }
 
       if (!mod && !e.altKey && !typing) {
         if (key === 'a' && e.shiftKey) {
           e.preventDefault()
-          ui.openPalette()
+          addHere()
         } else if (key === 'v') ui.setTool(ui.tool === 'select' ? 'pan' : 'select')
         else if (key === 'f') fit()
         else if (key === 'r') ui.toggleResult()
@@ -101,7 +107,7 @@ export function Shortcuts() {
       if (isNumberField(e.target) && (key === 'z' || key === 'y')) (e.target as HTMLElement).blur()
       if (key === 'k') {
         e.preventDefault()
-        ui.openPalette()
+        addHere()
       } else if (key === 's') {
         e.preventDefault() // the browser would save the page
         saveProjectFile()
@@ -175,7 +181,7 @@ export function Shortcuts() {
       document.removeEventListener('cut', onCut)
       document.removeEventListener('paste', onPaste)
     }
-  }, [fit, zoomIn, zoomOut])
+  }, [fit, zoomIn, zoomOut, screenToFlowPosition])
 
   return null
 }

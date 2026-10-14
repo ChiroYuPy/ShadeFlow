@@ -54,7 +54,6 @@ function ShadeNodeImpl({ id, data, selected }: NodeProps<ShadeFlowNode>) {
 
   return (
     <div
-      title={def.description}
       // The outline is a ring (outside the box) rather than a border, so the header can be
       // flush with the node's rounded corners.
       className={cn(

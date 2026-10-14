@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { BoxSelect, ClipboardPaste, Copy, CopyPlus, Eye, EyeOff, FoldVertical, Plus, RotateCcw, Scan, Scissors, Trash2, UnfoldVertical } from 'lucide-react'
+import { BoxSelect, ClipboardPaste, Copy, CopyPlus, Eye, EyeOff, FoldVertical, Info, Plus, RotateCcw, Scan, Scissors, Trash2, UnfoldVertical } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -99,6 +99,11 @@ export function ContextMenu() {
                 onSelect={toggleSelectionFold}
               >
                 {fold ? 'Fold' : 'Unfold'}
+              </Item>
+            )}
+            {nodes.length === 1 && (
+              <Item icon={<Info />} onSelect={() => useUIStore.getState().setAbout(nodes[0].type)}>
+                About this node
               </Item>
             )}
             {withValues.length > 0 && (

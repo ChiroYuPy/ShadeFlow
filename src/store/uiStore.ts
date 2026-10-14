@@ -57,6 +57,10 @@ interface UIState {
   helpOpen: boolean
   setHelpOpen: (open: boolean) => void
 
+  /** The node type whose description is shown ("About this node"), if any. */
+  about: string | null
+  setAbout: (type: string | null) => void
+
   /** The overlay to pick an example from. */
   examplesOpen: boolean
   setExamplesOpen: (open: boolean) => void
@@ -115,6 +119,9 @@ export const useUIStore = create<UIState>()((set) => ({
 
   helpOpen: false,
   setHelpOpen: (open) => set({ helpOpen: open }),
+
+  about: null,
+  setAbout: (type) => set({ about: type }),
 
   examplesOpen: false,
   setExamplesOpen: (open) => set({ examplesOpen: open }),

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
 import { SLIDE } from './motion'
+import { NodeDetails } from './NodeDetails'
 import { Overlay, OverlayHeader } from './Overlay'
 import { recentNodeTypes, rememberNodeType } from './recentNodes'
 
@@ -60,46 +61,15 @@ function matchScore(entry: Entry, search: string): number {
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), Math.max(min, max))
 
-/** A port as a colored dot and its name. A generic port takes whatever vector type is wired. */
-function PortChip({ label, type }: { label: string; type: string }) {
-  const any = type === 'gen'
-  return (
-    <li className="flex min-w-0 items-center gap-2">
-      <span
-        className={cn('size-2.5 shrink-0 rounded-full', any && 'bg-muted-foreground')}
-        style={any ? undefined : { background: `var(--port-${type})` }}
-      />
-      <span className="truncate">{label}</span>
-      <span className="ml-auto text-xs text-muted-foreground">{any ? 'any' : type}</span>
-    </li>
-  )
-}
-
 /** What a node does and what it takes and gives, unfolded under its line. */
 function Details({ entry }: { entry: Entry }) {
-  const { def } = entry
-  const inputs = def?.inputs.filter((p) => p.connectable !== false) ?? []
   return (
-    <div data-state="open" className={cn(SLIDE.top, 'mx-2 mb-2 flex flex-col gap-3 rounded-lg bg-background/50 p-3')}>
-      <p className="text-sm text-muted-foreground">{entry.description}</p>
-      {def && (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-          <div className="text-xs font-medium text-muted-foreground">Inputs</div>
-          <div className="text-xs font-medium text-muted-foreground">Outputs</div>
-          <ul className="flex min-w-0 flex-col gap-1">
-            {inputs.length === 0 && <li className="text-muted-foreground">None</li>}
-            {inputs.map((p) => (
-              <PortChip key={p.name} label={p.label} type={p.type} />
-            ))}
-          </ul>
-          <ul className="flex min-w-0 flex-col gap-1">
-            {def.outputs.map((p) => (
-              <PortChip key={p.name} label={p.label} type={p.type} />
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
+    <NodeDetails
+      description={entry.description}
+      def={entry.def}
+      className={cn(SLIDE.top, 'mx-2 mb-2 rounded-lg bg-background/50 p-3')}
+      data-state="open"
+    />
   )
 }
 

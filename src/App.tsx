@@ -19,6 +19,7 @@ import NodePalette from '@/ui/NodePalette'
 import CodePanel from '@/ui/CodePanel'
 import HelpDialog from '@/ui/HelpDialog'
 import ExamplesPanel from '@/ui/ExamplesPanel'
+import NodeAbout from '@/ui/NodeAbout'
 
 const NO_ERRORS: Record<string, string> = {}
 
@@ -72,12 +73,14 @@ function App() {
       <Presence
         show={codeOpen}
         from="bottomOrLeft"
-        // As tall as its code needs on a wide screen, up to the bars below.
-        className="absolute inset-x-3 bottom-32 flex h-[40%] flex-col sm:inset-x-auto sm:top-[4.25rem] sm:bottom-auto sm:left-4 sm:h-auto sm:max-h-[calc(100%-9rem)] sm:w-[26rem]"
+        // A phone keeps the bottom for the selection bar; a wide screen gives it as much height as its
+        // code needs, down to that bar.
+        className="absolute inset-x-3 bottom-20 flex h-[40%] flex-col sm:inset-x-auto sm:top-[4.25rem] sm:bottom-auto sm:left-4 sm:h-auto sm:max-h-[calc(100%-9rem)] sm:w-[26rem]"
       >
         <CodePanel ir={result.ok ? result.ir : null} />
       </Presence>
       <HelpDialog />
+      <NodeAbout />
       <Preview code={glsl} onStatus={setStatus} error={globalError || (result.ok ? '' : 'The graph has an error, see the highlighted node.')} />
 
       {/* The result panel shows the error itself; hidden, the error still has to be seen. */}
@@ -91,7 +94,7 @@ function App() {
       <Presence
         show={notice !== null}
         from="bottom"
-        className="panel absolute bottom-32 left-1/2 -translate-x-1/2 px-3 py-2 text-sm"
+        className="panel absolute bottom-20 left-1/2 -translate-x-1/2 px-3 py-2 text-sm"
       >
         {shownNotice}
       </Presence>

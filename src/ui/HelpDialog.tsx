@@ -94,7 +94,7 @@ export default function HelpDialog() {
       <OverlayHeader title="Gestures and shortcuts" />
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain p-4">
         <p className="text-sm text-muted-foreground">
-          Connect nodes from output (right) to input (left). Hover a node to read what it does.
+          Connect nodes from output (right) to input (left). Right-click a node, then “About this node”, to read what it does.
         </p>
         {SECTIONS.map((section) => (
           <section key={section.title}>

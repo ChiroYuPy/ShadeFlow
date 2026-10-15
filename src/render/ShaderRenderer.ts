@@ -1,4 +1,5 @@
 import { compileShader, linkProgram, VERTEX_SOURCE } from './gl'
+import { picturesHeld } from './hold'
 import { setMainSize } from './mainSize'
 import { getMouse } from './mouse'
 
@@ -68,7 +69,7 @@ export class ShaderRenderer {
   start() {
     if (this.frame) return
     const loop = () => {
-      this.draw(performance.now() / 1000)
+      if (!picturesHeld()) this.draw(performance.now() / 1000)
       this.frame = requestAnimationFrame(loop)
     }
     this.frame = requestAnimationFrame(loop)

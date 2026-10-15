@@ -1,3 +1,6 @@
+import { useEffect, useRef } from 'react'
+import { holdPictures } from '@/render/hold'
+
 /**
  * How panels appear and leave, everywhere: a short slide from the edge they sit against, with a
  * fade — eased out on the way in, the same movement backwards on the way out. Nothing else moves.
@@ -31,3 +34,16 @@ export const SLIDE = {
 export const SLIDE_MS = 250
 
 export type SlideFrom = keyof typeof SLIDE
+
+/**
+ * Pauses the pictures (the result and the node previews) while a big panel comes or goes: see
+ * `holdPictures`. Not when the page loads, so the result shows at once.
+ */
+export function useHoldWhileSliding(shown: boolean) {
+  const last = useRef(shown)
+  useEffect(() => {
+    if (last.current === shown) return
+    last.current = shown
+    holdPictures(SLIDE_MS)
+  }, [shown])
+}

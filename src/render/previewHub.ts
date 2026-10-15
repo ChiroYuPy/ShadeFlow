@@ -14,6 +14,7 @@ import {
 import { useGraphStore } from '@/store/graphStore'
 import { compileShader, linkProgram, VERTEX_SOURCE } from './gl'
 import { getMainSize } from './mainSize'
+import { picturesHeld } from './hold'
 import { getMouse } from './mouse'
 import { describeValue, previewKindOf, usesInput, type PreviewKind } from './previewValue'
 
@@ -79,8 +80,6 @@ class PreviewHub {
   private programs = new Map<string, Program | null>()
   private listeners = new Set<() => void>()
   private frame = 0
-  /** Until then (`performance.now()`), pictures are not redrawn: see `hold`. */
-  private heldUntil = 0
   private gl: WebGL2RenderingContext | null = null
   private vertex: WebGLShader | null = null
   private observer: IntersectionObserver | null = null
@@ -220,20 +219,12 @@ class PreviewHub {
 
   // ── Frame loop ───────────────────────────────────────────────────────
 
-  /**
-   * Stops redrawing the pictures for a moment, while a panel slides in or out: redrawing many
-   * animated previews each frame would take the time the animation needs to stay smooth.
-   */
-  hold(ms: number) {
-    this.heldUntil = Math.max(this.heldUntil, performance.now() + ms)
-  }
-
   private start() {
     if (this.frame) return
     const tick = () => {
       const now = performance.now()
       const time = now / 1000
-      if (now >= this.heldUntil) this.drawImages(time)
+      if (!picturesHeld(now)) this.drawImages(time)
       this.updateValues(time)
       this.frame = requestAnimationFrame(tick)
     }

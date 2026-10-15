@@ -1,9 +1,8 @@
-import { useEffect, type ComponentProps, type ReactNode } from 'react'
+import { useEffect, useRef, type ComponentProps, type ReactNode } from 'react'
 import { Dialog } from 'radix-ui'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { previewHub } from '@/render/previewHub'
-import { SLIDE, SLIDE_MS } from './motion'
+import { SLIDE, useHoldWhileSliding } from './motion'
 import { PANEL_BUTTON, PANEL_HEADER, PANEL_TITLE } from './panel'
 import { useBackToClose } from './useBackToClose'
 import { useVisualViewportVars } from './useVisualViewport'
@@ -24,14 +23,22 @@ interface OverlayProps extends Omit<ComponentProps<typeof Dialog.Content>, 'titl
 export function Overlay({ open, onClose, title, className, children, ...props }: OverlayProps) {
   useVisualViewportVars()
   useBackToClose(open, onClose)
-  // The node previews behind wait for the overlay to be in place.
-  useEffect(() => previewHub.hold(SLIDE_MS), [open])
+  // The pictures behind wait for the overlay to be in place.
+  useHoldWhileSliding(open)
+  // While it slides away, it must not keep the focus: the keys go back to the editor at once
+  // (Ctrl+Z right after adding a node undoes it).
+  const content = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const focused = document.activeElement
+    if (!open && focused instanceof HTMLElement && content.current?.contains(focused)) focused.blur()
+  }, [open])
 
   return (
     <Dialog.Root open={open} onOpenChange={(o) => !o && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className={cn('fixed inset-0 z-50 bg-black/50', SLIDE.fade)} />
         <Dialog.Content
+          ref={content}
           aria-describedby={undefined}
           // Focus goes to the search field, if any, never to the close button. On a phone, not even
           // to the field: its keyboard would cover half of the content, let the user look first.

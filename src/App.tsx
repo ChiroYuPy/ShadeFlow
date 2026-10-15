@@ -6,8 +6,7 @@ import { Editor } from '@/editor/Editor'
 import type { ShaderStatus } from '@/render/ShaderRenderer'
 import { useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
-import { previewHub } from '@/render/previewHub'
-import { SLIDE_MS } from '@/ui/motion'
+import { useHoldWhileSliding } from '@/ui/motion'
 import { Presence } from '@/ui/Presence'
 import { Preview } from '@/ui/Preview'
 import { ContextMenu } from '@/ui/ContextMenu'
@@ -45,8 +44,8 @@ function App() {
   // Nothing can be drawn: these nodes are why.
   const errorNodes = useMemo(() => (result.ok ? [] : Object.keys(errors)), [result, errors])
 
-  // The node previews wait for the code panel to be in place (or gone).
-  useEffect(() => previewHub.hold(SLIDE_MS), [codeOpen])
+  // The pictures wait for the code panel to be in place (or gone).
+  useHoldWhileSliding(codeOpen)
 
   useEffect(() => {
     if (!notice) return

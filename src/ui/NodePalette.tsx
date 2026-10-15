@@ -1,4 +1,4 @@
-import { createElement, useDeferredValue, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { createElement, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { ChevronDown, Search } from 'lucide-react'
 import { compatiblePort, insertPorts, listNodeDefs, NOTE_TYPE, type NodeDef } from '@/core'
@@ -6,7 +6,7 @@ import { CATEGORY_LABELS, CATEGORY_TEXT, nodeIcon } from '@/editor/nodeLook'
 import { cn } from '@/lib/utils'
 import { beginGesture, endGesture, useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
-import { SLIDE } from './motion'
+import { SLIDE, SLIDE_MS } from './motion'
 import { NodeDetails } from './NodeDetails'
 import { Overlay, OverlayHeader } from './Overlay'
 import { recentNodeTypes, rememberNodeType } from './recentNodes'
@@ -73,7 +73,19 @@ function Details({ entry }: { entry: Entry }) {
   )
 }
 
-const NO_SECTIONS: Section[] = []
+/** Lines drawn while the sheet slides in: enough to fill it on any screen. */
+const FIRST_LINES = 24
+
+/** The first `count` lines of the sections. */
+function firstLines(sections: Section[], count: number): Section[] {
+  const out: Section[] = []
+  for (const section of sections) {
+    if (count <= 0) break
+    out.push({ ...section, entries: section.entries.slice(0, count) })
+    count -= section.entries.length
+  }
+  return out
+}
 
 const close = () => useUIStore.getState().closePalette()
 
@@ -125,8 +137,14 @@ function PaletteBody() {
     return out
   }, [offered, search, fitting])
 
-  // The sheet comes first and starts sliding in, the list follows a moment later.
-  const sections = useDeferredValue(found, NO_SECTIONS)
+  // The sheet slides in with the lines that show; the rest of the list (a hundred icons) is drawn
+  // once it is in place, so the slide does not stop halfway on a phone.
+  const [whole, setWhole] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setWhole(true), SLIDE_MS)
+    return () => clearTimeout(timer)
+  }, [])
+  const sections = useMemo(() => (whole ? found : firstLines(found, FIRST_LINES)), [whole, found])
   const entries = useMemo(() => sections.flatMap((s) => s.entries), [sections])
   // The highlighted line: the one last pointed at or reached with the arrows, else the first.
   const current = entries.find((e) => e.key === active) ?? entries[0]

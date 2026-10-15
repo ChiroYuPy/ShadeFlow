@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { temporal } from 'zundo'
-import { canConnect, newId, NOTE_TYPE, parseProject, serializeProject, type Graph, type GraphFragment, type PortRef } from '@/core'
+import { canConnect, newId, snapToGrid, NOTE_TYPE, parseProject, serializeProject, type Graph, type GraphFragment, type PortRef } from '@/core'
 import { DEFAULT_GRAPH } from '@/demo/examples'
 
 const STORAGE_KEY = 'shadeflow:project'
@@ -22,6 +22,7 @@ interface Position {
 
 interface GraphState {
   graph: Graph
+  /** The node lands on the nearest grid point. */
   addNode: (type: string, position: Position) => string
   moveNodes: (positions: Record<string, Position>) => void
   removeNodes: (ids: string[]) => void
@@ -53,7 +54,7 @@ export const useGraphStore = create<GraphState>()(
 
       addNode: (type, position) => {
         const id = newId()
-        const node = { id, type, position, values: {}, ...(type === NOTE_TYPE ? { text: '' } : {}) }
+        const node = { id, type, position: snapToGrid(position), values: {}, ...(type === NOTE_TYPE ? { text: '' } : {}) }
         set(({ graph }) => ({ graph: { ...graph, nodes: { ...graph.nodes, [id]: node } } }))
         return id
       },

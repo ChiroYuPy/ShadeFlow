@@ -1,4 +1,4 @@
-import { newGraph, NOTE_TYPE, type Graph, type GraphEdge, type GraphNode } from './graph'
+import { newGraph, NOTE_TYPE, snapToGrid, type Graph, type GraphEdge, type GraphNode } from './graph'
 import { getNodeDef } from './nodes/registry'
 
 const FORMAT = 'shadeflow'
@@ -62,10 +62,11 @@ export function sanitizeNodes(raw: unknown): Record<string, GraphNode> {
     nodes[key] = {
       id: key,
       type: n.type,
-      position: {
+      // Projects written before the grid get their nodes put on it.
+      position: snapToGrid({
         x: typeof pos.x === 'number' && Number.isFinite(pos.x) ? pos.x : 0,
         y: typeof pos.y === 'number' && Number.isFinite(pos.y) ? pos.y : 0,
-      },
+      }),
       values,
       ...(typeof n.text === 'string' ? { text: n.text } : {}),
       ...(typeof n.previewPort === 'string' ? { previewPort: n.previewPort } : {}),

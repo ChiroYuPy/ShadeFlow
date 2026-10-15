@@ -1,5 +1,6 @@
 import { memo, useLayoutEffect, useRef } from 'react'
 import type { Node, NodeProps } from '@xyflow/react'
+import { GRID } from '@/core'
 import { cn } from '@/lib/utils'
 import { editText } from '@/store/graphStore'
 
@@ -13,9 +14,11 @@ function NoteNodeImpl({ id, data, selected }: NodeProps<NoteFlowNode>) {
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
+    // The note takes whole grid cells, like every node.
     const fit = () => {
       el.style.height = '0'
-      el.style.height = `${el.scrollHeight}px`
+      const chrome = el.parentElement!.offsetHeight - el.offsetHeight
+      el.style.height = `${Math.ceil((el.scrollHeight + chrome) / GRID) * GRID - chrome}px`
     }
     fit()
     // The font may arrive after the first layout and wrap the text differently.

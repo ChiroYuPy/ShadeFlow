@@ -3,10 +3,10 @@ import { newGraph, parseProject, serializeProject, type Graph } from './index'
 
 const sample: Graph = {
   nodes: {
-    output: { id: 'output', type: 'output', position: { x: 10, y: 20 }, values: { color: [1, 0, 0] } },
+    output: { id: 'output', type: 'output', position: { x: 280, y: 56 }, values: { color: [1, 0, 0] } },
     t: { id: 't', type: 'time', position: { x: 0, y: 0 }, values: {} },
-    n: { id: 'n', type: 'note', position: { x: 5, y: 5 }, values: {}, text: 'hello' },
-    s: { id: 's', type: 'split', position: { x: 1, y: 2 }, values: {}, previewPort: 'y', showPreview: true, collapsed: true },
+    n: { id: 'n', type: 'note', position: { x: 0, y: 140 }, values: {}, text: 'hello' },
+    s: { id: 's', type: 'split', position: { x: -28, y: 28 }, values: {}, previewPort: 'y', showPreview: true, collapsed: true },
   },
   edges: [],
 }
@@ -14,6 +14,11 @@ const sample: Graph = {
 describe('project files', () => {
   it('round-trips a graph', () => {
     expect(parseProject(serializeProject(sample))).toEqual(sample)
+  })
+
+  it('puts nodes written before the grid on it', () => {
+    const graph = { ...sample, nodes: { ...sample.nodes, t: { ...sample.nodes.t, position: { x: 13, y: -15 } } } }
+    expect(parseProject(serializeProject(graph)).nodes.t.position).toEqual({ x: 0, y: -28 })
   })
 
   it('rejects things that are not projects', () => {

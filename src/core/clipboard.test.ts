@@ -11,9 +11,9 @@ import {
 const graph: Graph = {
   nodes: {
     t: { id: 't', type: 'time', position: { x: 0, y: 0 }, values: {} },
-    m: { id: 'm', type: 'multiply', position: { x: 100, y: 0 }, values: { b: [2] } },
-    s: { id: 's', type: 'sin', position: { x: 200, y: 0 }, values: {} },
-    o: { id: 'o', type: 'output', position: { x: 300, y: 0 }, values: {} },
+    m: { id: 'm', type: 'multiply', position: { x: 280, y: 0 }, values: { b: [2] } },
+    s: { id: 's', type: 'sin', position: { x: 560, y: 0 }, values: {} },
+    o: { id: 'o', type: 'output', position: { x: 840, y: 0 }, values: {} },
   },
   edges: [
     { id: 'e1', from: { nodeId: 't', port: 'time' }, to: { nodeId: 'm', port: 'a' } },
@@ -52,7 +52,7 @@ describe('instantiateFragment', () => {
     const f = extractFragment(graph, ['t', 'm', 's'])!
     const copy = instantiateFragment(f, { x: 10, y: 20 }, counter())
     expect(copy.nodes.map((n) => n.id)).toEqual(['new1', 'new2', 'new3'])
-    expect(copy.nodes[1].position).toEqual({ x: 110, y: 20 })
+    expect(copy.nodes[1].position).toEqual({ x: 290, y: 20 })
     expect(copy.edges).toHaveLength(2)
     expect(copy.edges[0].from.nodeId).toBe('new1')
     expect(copy.edges[0].to.nodeId).toBe('new2')
@@ -101,15 +101,15 @@ describe('clipboard text', () => {
 describe('freeOffset', () => {
   it('shifts diagonally until the first node lands on free space', () => {
     const f = extractFragment(graph, ['t'])!
-    expect(freeOffset(graph, f)).toEqual({ x: 40, y: 40 })
+    expect(freeOffset(graph, f)).toEqual({ x: 56, y: 56 })
     const crowded: Graph = {
       ...graph,
       nodes: {
         ...graph.nodes,
-        x1: { id: 'x1', type: 'time', position: { x: 40, y: 40 }, values: {} },
-        x2: { id: 'x2', type: 'time', position: { x: 80, y: 80 }, values: {} },
+        x1: { id: 'x1', type: 'time', position: { x: 56, y: 56 }, values: {} },
+        x2: { id: 'x2', type: 'time', position: { x: 112, y: 112 }, values: {} },
       },
     }
-    expect(freeOffset(crowded, f)).toEqual({ x: 120, y: 120 })
+    expect(freeOffset(crowded, f)).toEqual({ x: 168, y: 168 })
   })
 })

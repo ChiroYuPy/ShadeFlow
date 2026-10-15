@@ -1,4 +1,4 @@
-import type { Graph, GraphEdge, GraphNode } from './graph'
+import { GRID, type Graph, type GraphEdge, type GraphNode } from './graph'
 import { newId as createId } from './id'
 import { sanitizeEdges, sanitizeNodes } from './project'
 
@@ -80,7 +80,7 @@ export function instantiateFragment(
  * Smallest diagonal shift (steps of `step`) that keeps the first pasted node from
  * landing exactly on an existing node, so repeated pastes cascade instead of stacking.
  */
-export function freeOffset(graph: Graph, fragment: GraphFragment, step = 40): { x: number; y: number } {
+export function freeOffset(graph: Graph, fragment: GraphFragment, step = 2 * GRID): { x: number; y: number } {
   const taken = new Set(Object.values(graph.nodes).map((n) => `${n.position.x},${n.position.y}`))
   const first = fragment.nodes[0].position
   for (let i = 1; i < 100; i++) {

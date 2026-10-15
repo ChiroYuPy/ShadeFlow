@@ -86,7 +86,7 @@ export function RampField({ value, onChange }: { value: number[]; onChange: (val
     <div
       ref={field}
       tabIndex={-1}
-      className="nodrag nopan flex flex-col gap-1 px-3 pt-1 pb-2 outline-none"
+      className="nodrag nopan flex h-21 flex-col px-3 outline-none"
       style={{ touchAction: 'none' }}
       onKeyDown={onKeyDown}
       onBlur={(e) => {
@@ -98,8 +98,9 @@ export function RampField({ value, onChange }: { value: number[]; onChange: (val
       onPointerUp={release}
       onPointerCancel={release}
     >
-      {/* The bar and the colors share one track, inset by half a color so the ends sit on its edges. */}
-      <div className="px-1.5">
+      {/* Three grid cells: two for the bar and its colors, one for the row below. The bar and the
+          colors share one track, inset by half a color so the ends sit on its edges. */}
+      <div className="flex h-14 flex-col justify-center px-1.5">
         <div ref={track} className="relative">
           <div
             data-ramp-bar=""
@@ -145,7 +146,7 @@ export function RampField({ value, onChange }: { value: number[]; onChange: (val
         </div>
       </div>
       {/* The row keeps its height either way, so the node does not jump. */}
-      <div className="flex h-6 items-center gap-1">
+      <div className="flex h-7 items-center gap-1">
         {stop === null || current === null ? (
           <span className="truncate text-xs text-muted-foreground">Click a color to edit it</span>
         ) : (

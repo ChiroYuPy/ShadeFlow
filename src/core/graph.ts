@@ -39,6 +39,21 @@ export interface Graph {
   edges: GraphEdge[]
 }
 
+/**
+ * Nodes live on a grid whose cell is the height of one port row: every position is a whole
+ * number of cells, and so is every size in the editor (see `editor/ShadeNode.tsx`).
+ */
+export const GRID = 28
+
+/** Width of a shader node (and of a note): 8 cells. */
+export const NODE_WIDTH = 8 * GRID
+
+/** The nearest grid point. */
+export const snapToGrid = (p: { x: number; y: number }) => ({
+  x: Math.round(p.x / GRID) * GRID,
+  y: Math.round(p.y / GRID) * GRID,
+})
+
 /** A new project: just the Output node. */
 export function newGraph(): Graph {
   return {

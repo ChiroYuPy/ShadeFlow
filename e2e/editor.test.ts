@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { GRID } from '../src/core'
 import { EXAMPLES } from '../src/demo/examples'
 import type { ElementHandle } from 'puppeteer-core'
 import { App } from './app'
@@ -105,6 +106,30 @@ describe('errors', () => {
   })
 })
 
+/** Where each node sits in flow coordinates, whether it is on the grid, and its pins in the middle of a cell. */
+const gridLayout = () =>
+  app.page.evaluate((grid) => {
+    const zoom = Number(/scale\(([\d.]+)\)/.exec((document.querySelector('.react-flow__viewport') as HTMLElement).style.transform)?.[1] ?? 1)
+    const whole = (v: number) => Math.abs(v / grid - Math.round(v / grid)) < 0.02
+    return [...document.querySelectorAll<HTMLElement>('.react-flow__node')].map((el) => {
+      const [x, y] = (/translate\(([-\d.]+)px, ?([-\d.]+)px\)/.exec(el.style.transform) ?? []).slice(1).map(Number)
+      const box = el.getBoundingClientRect()
+      const pins = [...el.querySelectorAll('.react-flow__handle')].map((h) => {
+        const r = h.getBoundingClientRect()
+        return (r.top + r.height / 2 - box.top) / zoom
+      })
+      return {
+        title: el.querySelector('.font-medium, textarea')?.textContent?.slice(0, 20) ?? '',
+        x,
+        y,
+        width: el.offsetWidth,
+        height: el.offsetHeight,
+        onGrid: [x, y, el.offsetWidth, el.offsetHeight].every(whole),
+        pinsOnGrid: pins.every((y) => whole(y - grid / 2)),
+      }
+    })
+  }, GRID)
+
 describe('examples', () => {
   const openExamples = async () => {
     await app.page.click('button[aria-label="Project menu"]')
@@ -146,6 +171,16 @@ describe('examples', () => {
     await app.sleep(1200)
     expect(await app.page.evaluate(() => document.body.textContent)).not.toContain('Cannot display')
     expect(await app.nodeTitles()).toContain('Output')
+    // Every node fills whole grid cells, its pins in the middle of a cell, and none covers or touches another.
+    const nodes = await gridLayout()
+    for (const n of nodes) expect(n, n.title).toMatchObject({ onGrid: true, pinsOnGrid: true })
+    const overlapping = nodes.flatMap((a, i) =>
+      nodes
+        .slice(i + 1)
+        .filter((b) => a.x <= b.x + b.width && b.x <= a.x + a.width && a.y <= b.y + b.height && b.y <= a.y + a.height)
+        .map((b) => `${a.title} / ${b.title}`),
+    )
+    expect(overlapping).toEqual([])
   })
 })
 
@@ -536,6 +571,19 @@ describe('right-click menus', () => {
 })
 
 describe('editing', () => {
+  it('snaps a dragged node to the grid', async () => {
+    const before = (await gridLayout()).find((n) => n.title === 'Fract')!
+    const box = (await (await app.header('Fract')).boundingBox())!
+    await app.page.mouse.move(box.x + 40, box.y + box.height / 2)
+    await app.page.mouse.down()
+    await app.page.mouse.move(box.x + 40 + 37, box.y + box.height / 2 + 51, { steps: 8 })
+    await app.page.mouse.up()
+    await app.sleep(300)
+    const after = (await gridLayout()).find((n) => n.title === 'Fract')!
+    expect(after.onGrid).toBe(true)
+    expect([after.x, after.y]).not.toEqual([before.x, before.y])
+  })
+
   it('undoes and redoes a typed number', async () => {
     const field = '[data-number-field]'
     const read = () => app.page.$eval(field, (e) => (e as HTMLInputElement).value)

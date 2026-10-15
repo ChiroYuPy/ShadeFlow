@@ -14,7 +14,7 @@ import {
   useStore,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { canConnect, concreteType, getNodeDef, NOTE_TYPE, resolveGenTypes, type ValueType } from '@/core'
+import { canConnect, concreteType, getNodeDef, GRID, NOTE_TYPE, resolveGenTypes, type ValueType } from '@/core'
 import { beginGesture, endGesture, useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
 import { pressedByFinger } from '@/ui/pointer'
@@ -48,6 +48,9 @@ function FitOnRequest() {
 const TOUCH = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
 
 const nodeTypes = { shade: ShadeNode, note: NoteNode }
+
+/** Diameter of the grid's dots. */
+const DOT = 1.5
 
 interface EditorProps {
   /** Compile errors by node id. */
@@ -255,6 +258,8 @@ export function Editor({ errors }: EditorProps) {
         if (selectTool) useUIStore.getState().setTool('pan')
       }}
       selectionMode={SelectionMode.Partial}
+      snapToGrid
+      snapGrid={[GRID, GRID]}
       onConnectEnd={onConnectEnd}
       onReconnect={onReconnect}
       onReconnectEnd={onReconnectEnd}
@@ -267,7 +272,15 @@ export function Editor({ errors }: EditorProps) {
     >
       <ZoomVar />
       <FitOnRequest />
-      <Background variant={BackgroundVariant.Dots} gap={20} size={1.5} color="var(--canvas-dot)" />
+      {/* React Flow draws its dots half a cell (plus their radius) off the grid points: the offset
+          puts them back on the grid, where the node corners and the pins land. */}
+      <Background
+        variant={BackgroundVariant.Dots}
+        gap={GRID}
+        size={DOT}
+        offset={(GRID + DOT) / 2}
+        color="var(--canvas-dot)"
+      />
     </ReactFlow>
   )
 }

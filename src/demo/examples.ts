@@ -1,4 +1,4 @@
-import { compileGraph, getNodeDef, type Graph, type GraphEdge, type GraphNode } from '@/core'
+import { compileGraph, getNodeDef, GRID, snapToGrid, type Graph, type GraphEdge, type GraphNode } from '@/core'
 import { previewKindOf } from '@/render/previewValue'
 
 export interface Example {
@@ -21,9 +21,12 @@ interface NodeSpec {
 }
 
 /**
- * Rows of the examples are written about 300 apart, which fits nodes without a preview.
- * A square preview makes a node much taller: everything below the first row is spread out.
+ * The examples are written in columns 260 apart and rows about 300 apart, which fits nodes
+ * without a preview. Nodes are 8 grid cells wide: columns are put 10 cells (280) apart. A square
+ * preview makes a node much taller: everything below the first row is spread out. Then every
+ * node is put on the grid.
  */
+const COLUMN_STRETCH = (10 * GRID) / 260
 const ROW_STRETCH = 1.5
 
 /**
@@ -35,7 +38,7 @@ function graphOf(specs: Record<string, NodeSpec>, wires: string[]): Graph {
     nodes[id] = {
       id,
       type: s.type,
-      position: { x: s.x, y: s.y > 0 ? Math.round(s.y * ROW_STRETCH) : s.y },
+      position: snapToGrid({ x: s.x * COLUMN_STRETCH, y: s.y > 0 ? s.y * ROW_STRETCH : s.y }),
       values: s.values ?? {},
       ...(s.text !== undefined ? { text: s.text } : {}),
       ...(s.previewPort !== undefined ? { previewPort: s.previewPort } : {}),
@@ -54,19 +57,19 @@ const note = (x: number, y: number, text: string): NodeSpec => ({ type: 'note', 
 const slidingGradient = graphOf(
   {
     n1: note(0, -170, 'UV is the position of each pixel, from 0 to 1. Split extracts its X (left to right).'),
-    n2: note(720, -120, 'Subtracting time slides the pattern. Fract repeats 0 → 1 over and over, making bands.'),
-    n3: note(1200, 220, 'Mix blends two colors: 0 gives the first, 1 gives the second.'),
+    n2: note(780, -120, 'Subtracting time slides the pattern. Fract repeats 0 → 1 over and over, making bands.'),
+    n3: note(1300, 220, 'Mix blends two colors: 0 gives the first, 1 gives the second.'),
     uv: { type: 'uv', x: 0, y: 0 },
-    split: { type: 'split', x: 240, y: 0 },
+    split: { type: 'split', x: 260, y: 0 },
     time: { type: 'time', x: 0, y: 300 },
-    scaleX: { type: 'multiply', x: 480, y: 0, values: { b: [3] } },
-    speed: { type: 'multiply', x: 240, y: 270, values: { b: [0.3] } },
-    shift: { type: 'subtract', x: 720, y: 110 },
-    repeat: { type: 'fract', x: 960, y: 110 },
-    colorA: { type: 'color', x: 720, y: 360, values: { color: [0.1, 0.15, 0.6] } },
-    colorB: { type: 'color', x: 720, y: 500, values: { color: [1, 0.55, 0.2] } },
-    mix: { type: 'mix', x: 1200, y: 300 },
-    out: { type: 'output', x: 1440, y: 300 },
+    scaleX: { type: 'multiply', x: 520, y: 0, values: { b: [3] } },
+    speed: { type: 'multiply', x: 260, y: 300, values: { b: [0.3] } },
+    shift: { type: 'subtract', x: 780, y: 110 },
+    repeat: { type: 'fract', x: 1040, y: 110 },
+    colorA: { type: 'color', x: 780, y: 380, values: { color: [0.1, 0.15, 0.6] } },
+    colorB: { type: 'color', x: 780, y: 500, values: { color: [1, 0.55, 0.2] } },
+    mix: { type: 'mix', x: 1300, y: 300 },
+    out: { type: 'output', x: 1560, y: 300 },
   },
   [
     'uv.uv > split.value',
@@ -415,7 +418,7 @@ const liquidMarble = graphOf(
     n1: note(260, -190, 'Centered UV, nudged by time, feeds the Noise: a slowly drifting field of smooth random blobs. Scale sets their size.'),
     n2: note(780, -190, 'The noise bends the space: it is added to the position before measuring the distance from the center. That is domain warping.'),
     n3: note(1560, -240, 'Distance + noise − time goes through a Cosine Palette: one number becomes a smooth color. Try editing D!'),
-    n4: note(260, 1070, 'Smoothstep turns the distance from the center into a mask, One Minus flips it, and Multiply darkens the corners: a vignette.'),
+    n4: note(260, 1110, 'Smoothstep turns the distance from the center into a mask, One Minus flips it, and Multiply darkens the corners: a vignette.'),
     c: { type: 'centered-uv', x: 0, y: 0 },
     t: { type: 'time', x: 0, y: 330 },
     drift: { type: 'multiply', x: 260, y: 330, values: { b: [0.05] } },
@@ -920,9 +923,9 @@ const infiniteFloor = graphOf(
     below: { type: 'subtract', x: 520, y: 100, values: { a: [0.08] } },
     depth: { type: 'divide', x: 780, y: 100, values: { a: [0.5] } },
     across: { type: 'multiply', x: 1040, y: 0 },
-    t: { type: 'time', x: 780, y: 400 },
-    speed: { type: 'multiply', x: 1040, y: 400, values: { b: [1.5] } },
-    ahead: { type: 'add', x: 1040, y: 200 },
+    t: { type: 'time', x: 780, y: 540 },
+    speed: { type: 'multiply', x: 1040, y: 540, values: { b: [1.5] } },
+    ahead: { type: 'add', x: 1040, y: 260 },
     floorPos: { type: 'vec2', x: 1300, y: 100 },
     tiles: { type: 'checkerboard', x: 1560, y: 100, values: { count: [1] } },
     a: { type: 'color', x: 1560, y: 420, values: { color: [0.95, 0.3, 0.7] } },

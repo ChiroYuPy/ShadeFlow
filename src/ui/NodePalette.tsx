@@ -1,7 +1,7 @@
 import { createElement, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { ChevronDown, Search } from 'lucide-react'
-import { compatiblePort, insertPorts, listNodeDefs, NOTE_TYPE, type NodeDef } from '@/core'
+import { compatiblePort, GRID, insertPorts, listNodeDefs, NODE_WIDTH, NOTE_TYPE, type NodeDef } from '@/core'
 import { CATEGORY_LABELS, CATEGORY_TEXT, nodeIcon } from '@/editor/nodeLook'
 import { cn } from '@/lib/utils'
 import { beginGesture, endGesture, useGraphStore } from '@/store/graphStore'
@@ -162,7 +162,7 @@ function PaletteBody() {
     rememberNodeType(type)
     beginGesture()
     store.removeEdges([edgeId])
-    const id = store.addNode(type, { x: point.x - 104, y: point.y - 20 })
+    const id = store.addNode(type, { x: point.x - NODE_WIDTH / 2, y: point.y - GRID })
     store.connect(edge.from, { nodeId: id, port: ports.input })
     store.connect({ nodeId: id, port: ports.output }, edge.to)
     endGesture()
@@ -176,7 +176,7 @@ function PaletteBody() {
     const store = useGraphStore.getState()
     const port = anchor ? compatiblePort(store.graph, anchor, type) : null
     // A node feeding an input goes to the left of where the wire was dropped.
-    if (anchor?.direction === 'to') position = { x: position.x - 230, y: position.y }
+    if (anchor?.direction === 'to') position = { x: position.x - NODE_WIDTH - GRID, y: position.y }
     if (type !== NOTE_TYPE) rememberNodeType(type)
     const id = store.addNode(type, position)
     if (anchor && port) {

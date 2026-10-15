@@ -93,12 +93,6 @@ function ShadeNodeImpl({ id, data, selected }: NodeProps<ShadeFlowNode>) {
       </div>
 
       {data.error && <div className="px-3 pt-1.5 text-xs text-destructive">{data.error}</div>}
-      {showPreview && (
-        <div className="px-2 pt-2">
-          <NodePreview nodeId={id} />
-        </div>
-      )}
-
       <div className="py-1.5">
         {outputs.map((port) => {
           // With several outputs, the label picks which one the preview shows.
@@ -175,6 +169,13 @@ function ShadeNodeImpl({ id, data, selected }: NodeProps<ShadeFlowNode>) {
           )
         })}
       </div>
+
+      {/* Last, so showing or hiding it never moves the pins (nor the wires). */}
+      {showPreview && (
+        <div className="px-2 pb-2">
+          <NodePreview nodeId={id} />
+        </div>
+      )}
     </div>
   )
 }

@@ -55,7 +55,7 @@ const slidingGradient = graphOf(
   {
     n1: note(0, -170, 'UV is the position of each pixel, from 0 to 1. Split extracts its X (left to right).'),
     n2: note(720, -120, 'Subtracting time slides the pattern. Fract repeats 0 → 1 over and over, making bands.'),
-    n3: note(1200, -50, 'Mix blends two colors: 0 gives the first, 1 gives the second.'),
+    n3: note(1200, 220, 'Mix blends two colors: 0 gives the first, 1 gives the second.'),
     uv: { type: 'uv', x: 0, y: 0 },
     split: { type: 'split', x: 240, y: 0 },
     time: { type: 'time', x: 0, y: 300 },
@@ -65,8 +65,8 @@ const slidingGradient = graphOf(
     repeat: { type: 'fract', x: 960, y: 110 },
     colorA: { type: 'color', x: 720, y: 360, values: { color: [0.1, 0.15, 0.6] } },
     colorB: { type: 'color', x: 720, y: 500, values: { color: [1, 0.55, 0.2] } },
-    mix: { type: 'mix', x: 1200, y: 190 },
-    out: { type: 'output', x: 1440, y: 190 },
+    mix: { type: 'mix', x: 1200, y: 300 },
+    out: { type: 'output', x: 1440, y: 300 },
   },
   [
     'uv.uv > split.value',

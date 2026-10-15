@@ -1,7 +1,10 @@
 /** Where the mouse last was over the canvas (screen coordinates), or `null` when it is elsewhere. */
 let overCanvas: { x: number; y: number } | null = null
+/** What last pressed: `mouse`, `pen` or `touch`. */
+let lastPress = 'mouse'
 
 if (typeof window !== 'undefined') {
+  window.addEventListener('pointerdown', (e) => (lastPress = e.pointerType), { capture: true })
   window.addEventListener('pointermove', (e) => {
     if (e.pointerType !== 'mouse') return
     const onPane = e.target instanceof Element && e.target.closest('.react-flow') !== null
@@ -12,3 +15,9 @@ if (typeof window !== 'undefined') {
 
 /** The canvas point under the mouse, for a key that adds something "here". */
 export const pointerOnCanvas = () => overCanvas
+
+/**
+ * The last press was a finger. A finger gets no context menu, on any phone: iOS has none, so
+ * everything a menu offers is in the bars, and Android does the same.
+ */
+export const pressedByFinger = () => lastPress === 'touch'

@@ -3,7 +3,7 @@ import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { ACTIONS, describe, type ActionEnv, type ActionId, type ActionState, type MenuEntry } from './actions'
+import { ACTIONS, describe, offered, type ActionEnv, type ActionId, type ActionState, type MenuEntry } from './actions'
 
 interface ActionMenuProps {
   items: MenuEntry[]
@@ -15,14 +15,7 @@ interface ActionMenuProps {
 
 /** The entries of a menu: what is not offered right now is left out, and so are the separators it leaves alone. */
 export function ActionMenuItems({ items, state, env, labels }: ActionMenuProps) {
-  const kept: MenuEntry[] = []
-  for (const item of items) {
-    if (item !== '-') {
-      if (describe(item, state).available) kept.push(item)
-    } else if (kept.length > 0 && kept.at(-1) !== '-') kept.push(item)
-  }
-  if (kept.at(-1) === '-') kept.pop()
-  return kept.map((item, i) => {
+  return offered(items, state).map((item, i) => {
     if (item === '-') return <DropdownMenuSeparator key={`-${i}`} />
     const a = describe(item, state)
     return (

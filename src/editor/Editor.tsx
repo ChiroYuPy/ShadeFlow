@@ -17,6 +17,7 @@ import '@xyflow/react/dist/style.css'
 import { canConnect, concreteType, getNodeDef, NOTE_TYPE, resolveGenTypes, type ValueType } from '@/core'
 import { beginGesture, endGesture, useGraphStore } from '@/store/graphStore'
 import { useUIStore } from '@/store/uiStore'
+import { pressedByFinger } from '@/ui/pointer'
 import { useFit } from '@/ui/view'
 import { NoteNode, type NoteFlowNode } from './NoteNode'
 import { ShadeNode, type ShadeFlowNode } from './ShadeNode'
@@ -195,7 +196,9 @@ export function Editor({ errors }: EditorProps) {
     useUIStore.getState().openPalette(screenToFlowPosition({ x: e.clientX, y: e.clientY }))
   }
 
+  /** The right-click menu, for a mouse: a finger holding still gets nothing (see `pressedByFinger`). */
   const openContextMenu = (e: { clientX: number; clientY: number }, target: 'node' | 'edge' | 'pane', id?: string) =>
+    !pressedByFinger() &&
     useUIStore.getState().openContextMenu({
       x: e.clientX,
       y: e.clientY,
@@ -223,6 +226,7 @@ export function Editor({ errors }: EditorProps) {
         // Holding a finger on a value field is a scrub / edit, not a request for the menu.
         if ((e.target as HTMLElement).closest('input, button, .nodrag')) return
         e.preventDefault()
+        if (pressedByFinger()) return
         // Acting on an unselected node means acting on that node alone.
         if (!selected.has(node.id)) useUIStore.getState().setSelection([node.id])
         openContextMenu(e, 'node', node.id)
@@ -233,6 +237,7 @@ export function Editor({ errors }: EditorProps) {
       }}
       onEdgeContextMenu={(e, edge) => {
         e.preventDefault()
+        if (pressedByFinger()) return
         useUIStore.getState().setSelection([edge.id])
         openContextMenu(e, 'edge', edge.id)
       }}

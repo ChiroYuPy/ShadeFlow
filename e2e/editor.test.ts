@@ -387,13 +387,27 @@ describe('selection bar', () => {
     expect(await bar()).toBeNull()
   })
 
-  it('offers the whole node menu under "more"', async () => {
+  it('offers the rest of the node menu under "more", without what the bar shows', async () => {
     await app.clickNode('Fract')
     await app.page.click('[role=toolbar] button[aria-label="More"]')
     await app.page.waitForSelector('[role=menu]')
-    expect(await app.menuItems()).toEqual(
+    const items = await app.menuItems()
+    expect(items).toEqual(
       expect.arrayContaining([expect.stringContaining('About this node'), expect.stringContaining('Cut'), expect.stringContaining('Copy')]),
     )
+    expect(items.some((i) => /Duplicate|Delete|Frame/.test(i))).toBe(false)
+    await app.key('Escape')
+  })
+
+  it('inserts a node on a selected wire', async () => {
+    await app.page.evaluate(() => {
+      const path = document.querySelector<SVGPathElement>('.react-flow__edge-interaction')!
+      path.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await app.sleep(300)
+    expect(await app.page.$('[role=toolbar] button[aria-label="More"]')).toBeNull()
+    await app.page.click('[role=toolbar] button[aria-label="Insert a node"]')
+    await app.page.waitForSelector('[data-palette]')
     await app.key('Escape')
   })
 

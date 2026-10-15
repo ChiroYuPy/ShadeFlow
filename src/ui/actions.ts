@@ -193,9 +193,23 @@ export const MENUS = {
   wire: ['insert', '-', 'delete'],
   /** Right-click on empty canvas. */
   pane: ['add', 'paste', '-', 'selectAll', 'frame'],
-  /** What can be done with the selected nodes: the node menu, and the "more" of the selection bar. */
+  /** Right-click on the selected nodes: everything that can be done with them. */
   selection: ['insert', 'frame', 'previews', 'fold', 'about', 'reset', '-', 'duplicate', 'copy', 'cut', '-', 'delete'],
+  /** The "more" (⋯) of the selection bar: only what the bar does not show itself. */
+  more: ['about', 'reset', '-', 'copy', 'cut'],
 } satisfies Record<string, MenuEntry[]>
+
+/** The entries of a menu that are offered right now, without the separators they leave alone. */
+export function offered(items: MenuEntry[], s: ActionState): MenuEntry[] {
+  const kept: MenuEntry[] = []
+  for (const item of items) {
+    if (item !== '-') {
+      if (describe(item, s).available) kept.push(item)
+    } else if (kept.length > 0 && kept.at(-1) !== '-') kept.push(item)
+  }
+  if (kept.at(-1) === '-') kept.pop()
+  return kept
+}
 
 const currentSelection = () => describeSelection(useGraphStore.getState().graph, useUIStore.getState().selected)
 

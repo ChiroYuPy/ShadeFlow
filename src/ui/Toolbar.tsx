@@ -4,7 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/compon
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/uiStore'
 import { ActionButton, ActionMenuItems } from './ActionItems'
-import { MENUS, useActionEnv, useActionState, type ActionState } from './actions'
+import { MENUS, offered, useActionEnv, useActionState, type ActionState } from './actions'
 import { Presence } from './Presence'
 import { useLast } from './useLast'
 
@@ -42,7 +42,8 @@ function ProjectBar({ state }: { state: ActionState }) {
 
 /**
  * Bottom center, only while something is selected: what is done most with it, and the rest under
- * "more" (the node menu, for a touch screen that has no right click).
+ * "more". A touch screen has no right click: between them, the bar and its "more" offer all the
+ * node menu does, each thing once.
  */
 function SelectionBar({ state: current }: { state: ActionState }) {
   const show = current.selection.count > 0
@@ -71,18 +72,22 @@ function SelectionBar({ state: current }: { state: ActionState }) {
       <ActionButton id="frame" state={state} env={env} />
       <ActionButton id="previews" state={state} env={env} />
       <ActionButton id="fold" state={state} env={env} />
+      <ActionButton id="insert" state={state} env={env} />
       <ActionButton id="duplicate" state={state} env={env} />
       <ActionButton id="delete" state={state} env={env} />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label="More" title="More">
-            <Ellipsis />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="center" side="top" className="w-56">
-          <ActionMenuItems items={MENUS.selection} state={state} env={env} />
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* A wire alone has nothing more. */}
+      {offered(MENUS.more, state).length > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="More" title="More">
+              <Ellipsis />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" side="top" className="w-56">
+            <ActionMenuItems items={MENUS.more} state={state} env={env} />
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
       <Divider />
       <ActionButton id="deselect" state={state} env={env} />
     </Presence>

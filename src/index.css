@@ -129,8 +129,12 @@
 /*
  * The one look of everything floating over the canvas: panels, bars, menus, dialogs.
  * The border color comes from the base layer, so `border-destructive` & co. still apply.
+ * A panel always takes its own clicks: while a menu is open, Radix turns the pointer off on the
+ * body, and the click that follows the press opening it would go through to the node underneath
+ * (React Flow keeps the pointer on for nodes).
  */
 @utility panel {
+  pointer-events: auto;
   border-width: 1px;
   border-radius: var(--radius-xl);
   background-color: var(--card);

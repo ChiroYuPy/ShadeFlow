@@ -396,6 +396,46 @@ describe('selection bar', () => {
     )
     await app.key('Escape')
   })
+
+  it('keeps the tap that opens a menu, even over a node', async () => {
+    // A tap is hit-tested again where it ends, unlike a mouse click.
+    await app.page.setViewport({ width: 1400, height: 800, hasTouch: true })
+    await app.reload()
+    const tap = async (title: string) => {
+      const b = (await (await app.header(title)).boundingBox())!
+      await app.page.touchscreen.tap(b.x + 30, b.y + b.height / 2)
+      await app.sleep(400)
+      return b
+    }
+    const moreButton = async () => (await (await app.page.$('[role=toolbar] button[aria-label="More"]'))!.boundingBox())!
+    // Subtract goes under the "more" of the bar (a finger moves a selected node).
+    const box = await tap('Subtract')
+    const target = await moreButton()
+    const from = { x: box.x + 30, y: box.y + box.height / 2 }
+    await app.page.touchscreen.touchStart(from.x, from.y)
+    for (let i = 1; i <= 8; i++) {
+      await app.page.touchscreen.touchMove(from.x + ((target.x - from.x) * i) / 8, from.y + ((target.y - 30 - from.y) * i) / 8)
+    }
+    await app.page.touchscreen.touchEnd()
+    await app.sleep(300)
+    await tap('Fract')
+    const more = await moreButton()
+    const under = await app.page.evaluate(
+      (x, y) => document.elementsFromPoint(x, y).some((e) => e.closest('.react-flow__node')?.textContent?.includes('Subtract')),
+      more.x + more.width / 2,
+      more.y + more.height / 2,
+    )
+    expect(under).toBe(true)
+    await app.page.touchscreen.tap(more.x + more.width / 2, more.y + more.height / 2)
+    await app.page.waitForSelector('[role=menu]')
+    await app.sleep(150)
+    const selected = await app.page.evaluate(() =>
+      [...document.querySelectorAll('.react-flow__node.selected .bg-node-header')].map((h) => h.textContent?.trim()),
+    )
+    expect(selected).toEqual(['Fract'])
+    await app.key('Escape')
+    await app.page.setViewport({ width: 1400, height: 800 })
+  })
 })
 
 describe('right-click menus', () => {
@@ -708,6 +748,23 @@ describe('touch screens', () => {
     expect(await selectedCount()).toBeGreaterThan(1)
     // armed for one drag only: a finger moves the view again
     expect(await app.page.$eval('.react-flow__pane', (p) => p.classList.contains('draggable'))).toBe(true)
+  })
+
+  it('lets a finger drag over the result, for the Mouse node', async () => {
+    await app.page.setViewport({ width: 390, height: 800, isMobile: true, hasTouch: true })
+    await app.reload()
+    const canvas = (await app.page.$('[data-result] canvas'))!
+    await canvas.evaluate((c) => {
+      const w = window as unknown as { moves: number }
+      w.moves = 0
+      c.addEventListener('pointermove', () => w.moves++)
+    })
+    const b = (await canvas.boundingBox())!
+    await app.page.touchscreen.touchStart(b.x + 10, b.y + 10)
+    for (let i = 1; i <= 10; i++) await app.page.touchscreen.touchMove(b.x + 10 + i * 5, b.y + 10 + i * 5)
+    await app.page.touchscreen.touchEnd()
+    // The browser does not take the drag to scroll (which would stop the events after a few pixels).
+    expect(await app.page.evaluate(() => (window as unknown as { moves: number }).moves)).toBe(10)
   })
 
   it('edits a value only once the node is selected', async () => {

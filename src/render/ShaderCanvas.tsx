@@ -36,7 +36,8 @@ export function ShaderCanvas({ code, onStatus, className }: ShaderCanvasProps) {
     if (status) onStatusRef.current?.(status)
   }, [code])
 
-  // The Mouse node reads the pointer over the result (also while a finger drags on it).
+  // The Mouse node reads the pointer over the result (also while a finger drags on it: `touch-none`
+  // keeps the browser from taking that drag to scroll, which would stop the events after a few pixels).
   const trackPointer = (e: PointerEvent<HTMLCanvasElement>) => {
     const box = e.currentTarget.getBoundingClientRect()
     if (box.width > 0 && box.height > 0) {
@@ -47,7 +48,7 @@ export function ShaderCanvas({ code, onStatus, className }: ShaderCanvasProps) {
   return (
     <canvas
       ref={canvasRef}
-      className={cn('block h-full w-full', className)}
+      className={cn('block h-full w-full touch-none', className)}
       onPointerMove={trackPointer}
       onPointerDown={trackPointer}
     />

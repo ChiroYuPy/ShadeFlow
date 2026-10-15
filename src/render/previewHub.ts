@@ -33,6 +33,17 @@ import { describeValue, previewKindOf, usesInput, type PreviewKind } from './pre
 /** Previews are square, like the result: a circle looks like a circle. */
 export const PREVIEW_SIZE = 256
 
+/**
+ * Node previews only explain what happens along the graph: an animated one is redrawn 20 times a
+ * second, not every frame, a third of what it would cost at 60 Hz (less still at 120 Hz). The result
+ * keeps the full rate. A preview that changed is drawn at once, whatever the rate.
+ */
+const PICTURE_INTERVAL = 1000 / 20
+/** A changing number is rewritten 10 times a second: faster, nobody could read it. */
+const VALUE_INTERVAL = 1000 / 10
+/** A frame may come a little early: 2 ms of slack keeps one frame in three at 60 Hz. */
+const SLACK = 2
+
 /** What the compiler found out about one previewed output. */
 interface Analysis {
   kind: PreviewKind
@@ -41,7 +52,7 @@ interface Analysis {
   /** For `value`. */
   ir: IRModule | null
   type: ValueType
-  /** Depends on time or on the pointer: must be redrawn every frame. */
+  /** Depends on time or on the pointer: must be redrawn over and over. */
   animated: boolean
 }
 
@@ -80,6 +91,9 @@ class PreviewHub {
   private programs = new Map<string, Program | null>()
   private listeners = new Set<() => void>()
   private frame = 0
+  /** When animated pictures, and numbers, were last redrawn. */
+  private lastPictures = -Infinity
+  private lastValues = -Infinity
   private gl: WebGL2RenderingContext | null = null
   private vertex: WebGLShader | null = null
   private observer: IntersectionObserver | null = null
@@ -224,8 +238,14 @@ class PreviewHub {
     const tick = () => {
       const now = performance.now()
       const time = now / 1000
-      if (!picturesHeld(now)) this.drawImages(time)
-      this.updateValues(time)
+      if (!picturesHeld(now)) {
+        const animate = now - this.lastPictures >= PICTURE_INTERVAL - SLACK
+        if (animate) this.lastPictures = now
+        this.drawImages(time, animate)
+      }
+      const animate = now - this.lastValues >= VALUE_INTERVAL - SLACK
+      if (animate) this.lastValues = now
+      this.updateValues(time, animate)
       this.frame = requestAnimationFrame(tick)
     }
     this.frame = requestAnimationFrame(tick)
@@ -236,12 +256,13 @@ class PreviewHub {
     this.frame = 0
   }
 
-  private updateValues(time: number) {
+  /** `animate`: also redraw what changes with time or the pointer. */
+  private updateValues(time: number, animate: boolean) {
     for (const [id, entry] of this.values) {
       if (!entry.visible) continue
       const analysis = this.analysisOf(id)
       if (analysis.kind !== 'value' || !analysis.ir) continue
-      if (!analysis.animated && entry.drawn === analysis) continue
+      if ((!analysis.animated || !animate) && entry.drawn === analysis) continue
 
       const rgb = evaluate(analysis.ir, { time, resolution: getMainSize(), mouse: getMouse() })
       const { text, swatch } = describeValue(analysis.type, rgb)
@@ -255,13 +276,13 @@ class PreviewHub {
     }
   }
 
-  private drawImages(time: number) {
+  private drawImages(time: number, animate: boolean) {
     for (const [id, entry] of this.images) {
       if (!entry.visible) continue
       const analysis = this.analysisOf(id)
       const source = analysis.kind === 'image' ? analysis.glsl : null
       const animated = source !== null && (source.includes('u_time') || source.includes('u_mouse'))
-      if (!animated && entry.drawn === source) continue
+      if ((!animated || !animate) && entry.drawn === source) continue
       this.draw(entry, source, time)
       entry.drawn = source
     }
